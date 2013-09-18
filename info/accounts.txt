@@ -1,0 +1,33 @@
+********************************************************************************
+	Tilera
+********************************************************************************
+1. From emails, 16 September 2013:
+"
+Your activation link is: https://files.tilera.com/index.php/verify/account/tCo941f3d
+Please follow the link and set your new password. Once you have set your password you can login to the client area here:
+https://files.tilera.com
+Your Username is: "Conne.Skidanenko@nuance.com"
+"
+"
+Access to these new files have been granted:
+    Multicore Development Environment 4.1.7 GA Patch (160914) Primary tarball
+    Multicore Development Environment 4.1.7 GA Patch (160914) Full tarball
+    Multicore Development Environment 4.1.7 GA Patch (160914) RPM tarball
+    Multicore Development Environment 4.1.7 GA Patch (160914) GCC 4.6 tarball
+    Multicore Development Environment 4.1.7 GA Patch (160914) Primary Debug tarball
+    Multicore Development Environment 4.1.7 GA Patch (160914) RPM Debug tarball
+    Multicore Development Environment 4.1 GA (148119) Release Notes
+    Multicore Development Environment 4.1.7 GA Patch (160914) Patch Notes 
+In order to download these files please login to the Tilera Client Area using your username and password.
+"
+
+2. Activation:
+Date: 18-Sep-2013, 10:30am
+User = Conne.Skidanenko@nuance.com
+Password = nuan3099
+
+3. Downloaded file listed above...
+Date: 18-Sep-2013, 10:40am
+
+
+
