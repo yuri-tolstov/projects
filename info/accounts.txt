@@ -29,5 +29,30 @@ Password = nuan3099
 3. Downloaded file listed above...
 Date: 18-Sep-2013, 10:40am
 
+Multicore Development Environment 4.1.7 GA Patch (160914) Primary tarball
+Decryption Key: 2l61t6ez
+
+Multicore Development Environment 4.1.7 GA Patch (160914) Full tarball
+Decryption Key: 2l61t6ez
+
+Multicore Development Environment 4.1.7 GA Patch (160914) RPM tarball
+Decryption Key: 2l61t6ez
+
+Multicore Development Environment 4.1.7 GA Patch (160914) GCC 4.6 tarball
+Decryption Key: 2l61t6ez
+
+Multicore Development Environment 4.1.7 GA Patch (160914) Primary Debug tarball
+Decryption Key: 2l61t6ez
+
+Multicore Development Environment 4.1.7 GA Patch (160914) RPM Debug tarball
+Decryption Key: 2l61t6ez
+
+To decrypt:
+# gpg <filename>.gpg
+> provide password
+# unxz <filename>.xz
+
+The uncompressed files have been copied to 10.65.50.126:~/ds11/tilera
+
 
 
