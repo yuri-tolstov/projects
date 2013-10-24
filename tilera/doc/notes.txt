@@ -51,3 +51,9 @@ PCI Driver on Host
 # modprobe tilegxpci
 # modinfo tilegxpci
 
+--------------------------------------------------------------------------------
+CallCap App
+--------------------------------------------------------------------------------
+$ tile-monitor --hvx TLR_NETWORK=gbe1,gbe2,gbe3,gbe4 --hvd POST=quick
+
+
