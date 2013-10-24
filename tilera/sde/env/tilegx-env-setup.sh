@@ -1,5 +1,4 @@
 #!/bin/sh
-set -x
 #-------------------------------------------------------------------------------
 # Command-line arguments
 #-------------------------------------------------------------------------------
@@ -8,15 +7,15 @@ OPMODE=$1
 # Build Environment Setup
 #-------------------------------------------------------------------------------
 HOSTCPU=$(uname -p)
-DS11PROJECT=tile
-DS11NPUCARD=tile
+DS11PROJECT=tilegx
+DS11NPUCARD=tilegx
 DS11NPUCARDV=0
 DS11NPUARC=tile
-DS11NPUMOD=gx36
+DS11NPUMOD=tile36
 DS11ENV_ROOT=$(pwd)
 cd ../..
-DS11VIEW_ROOT=$(pwd)
-DS11MAIN_ROOT=$DS11VIEW_ROOT/ds11.npu
+DS11VIEW_ROOT=$(pwd)/sde
+DS11MAIN_ROOT=$DS11VIEW_ROOT
 while test ! -d lost+found; do
    if test -d ds11sde; then
       break;
