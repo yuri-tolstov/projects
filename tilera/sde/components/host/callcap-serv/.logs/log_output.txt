@@ -1,3 +1,0 @@
-Tile-eclipse:
-An error has occurred. See the log file
-/home/ditech/ds11sde/projects/npu/ds11.npu/components/host/callcap-serv/.metadata/.log.
