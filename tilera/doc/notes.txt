@@ -1,0 +1,53 @@
+--------------------------------------------------------------------------------
+TILEncore Gx Info
+--------------------------------------------------------------------------------
+# uname -a
+Linux localhost 3.4.61-MDE-4.2.0.162878 #1 SMP Sun Sep 22 15:41:47 EDT 2013 tilegx tilegx tilegx GNU/Linux
+
+--------------------------------------------------------------------------------
+Start tile monitor:
+--------------------------------------------------------------------------------
+$ tile-monitor --hvx TLR_NETWORK=none --hvd POST=quick
+$ tile-monitor --dev gxpci0 --hvx TLR_NETWORK=none --hvd POST=quick
+$ tile-monitor --hvx TLR_NETWORK=none --hvx dataplane=1-255 --hvd POST=quick --tile 6x6
+$ tile-monitor --hvx TLR_NETWORK=gbe1,gbe2,gbe3,gbe4 --hvd POST=quick
+$ tile-monitor --hvx TLR_NETWORK=gbe1,gbe2,gbe3,gbe4 --hvx dataplane=1-255 --hvd POST=quick --tile 6x6
+
+----------------------------------------------
+In makefile of Forward program
+----------------------------------------------
+run_dev: callcap
+	$ tile-monitor $(DEV_ARGS) $(COMMON_ARGS)
+
+DEV_ARGS = --hvx TLR_NETWORK=gbe1,gbe2  --hvd POST=quick \
+           --hvx dataplane=1-255 --tile dataplane $(COMMON_ARGS)
+
+COMMON_ARGS = \
+  --mkdir /root/bin --cd /root/bin \
+  --upload callcap callcap -- callcap -w 8 -n 1000000000 --link gbe1
+
+----------------------------------------------
+
+--------------------------------------------------------------------------------
+Loading and running Hello program (Performed by Harold)
+--------------------------------------------------------------------------------
+[ditech@localhost forward]$ tile-monitor --hvx TLR_NETWORK=none --hvd POST=quick
+Command: 
+Command: upload ~/Tilera/hello/hello_world hello	    -- This puts hello in / 
+Command: upload ~/Tilera/hello/hello_world /root/hello      -- This puts hello in /root 
+Command: upload ~/Tilera/hello/hello_world /root/bin/hello  -- This puts hello in /root/bin
+Command: 
+
+--------------------------------------------------------------------------------
+Building and running Hello App (Taken from the Doc).
+--------------------------------------------------------------------------------
+$ tile-cc -o hello hello.c
+$ tile-monitor --pci --upload hello /tmp/hello -- /tmp/hello
+"Hello, world!"
+
+--------------------------------------------------------------------------------
+PCI Driver on Host
+--------------------------------------------------------------------------------
+# modprobe tilegxpci
+# modinfo tilegxpci
+
