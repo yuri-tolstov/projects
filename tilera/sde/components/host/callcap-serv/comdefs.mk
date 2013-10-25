@@ -28,5 +28,6 @@ include $(DS11ENV_ROOT)/$(CPU).toolset.mk
 
 CFLAGS += -std=gnu99 -g -Wall $(CDEFS) $(INCS)
 LDFLAGS += -g -Wall
+LDLIBS = -lpthread
 # LDLIBS = $(LIBLPATHS) -lgxpci -lgxio -ltmc
 
