@@ -22,43 +22,41 @@
 /*****************************************************************************/
 int main(int argc, char *argv[])
 {
-#if 1
-   const char* ipath = "/dev/tilegxpci0/t2h/0";
-   const char* opath = "/dev/tilegxpci0/h2t/0";
-#else
-   const char* ipath = "/dev/tilegxpci0/0";
-   const char* opath = "/dev/tilegxpci0/1";
-#endif
-   int ifd, ofd; /*File descriptors*/
-   void *ombuf, *imbuf; /*Output and Input Message buffers*/
+   const char* h2tpath = "/dev/tilegxpci0/h2t/0";
+   // const char* t2hpath = "/dev/tilegxpci0/t2h/0";
+   // int h2tfd, t2hfd; /*File descriptors*/
+   int h2tfd; /*File descriptors*/
+   // void *h2tbuf, *t2hbuf; /*Output and Input Message buffers*/
+   void *h2tbuf; /*Output and Input Message buffers*/
    int msize = 4096; /*Message size*/
+   // int n; /*Number*/
 
-   /*Output channel.*/
-   if ((ofd = open(opath, O_RDWR)) < 0) {
-      printf("Failed to open '%s': %s\n", opath, strerror(errno));
-      return 2;
-   }
-   ombuf = mmap(0, msize, PROT_READ|PROT_WRITE, MAP_SHARED, ofd, 0);
-   assert(ombuf != MAP_FAILED);
-   printf("Opened h2t.\n");
-
-   /*Input channel.*/
-   if ((ifd = open(ipath, O_RDWR)) < 0) {
-      printf("Failed to open '%s': %s\n", ipath, strerror(errno));
+   /*H2T channel.*/
+   if ((h2tfd = open(h2tpath, O_RDWR)) < 0) {
+      printf("Failed to open '%s': %s\n", h2tpath, strerror(errno));
       return 1;
    }
-   imbuf = mmap(0, msize, PROT_READ|PROT_WRITE, MAP_SHARED, ifd, 0);
-   assert(imbuf != MAP_FAILED);
-   printf("Opened t2h.\n");
+   printf("Opened T2H.\n");
+   h2tbuf = mmap(0, msize, PROT_READ|PROT_WRITE, MAP_SHARED, h2tfd, 0);
+   assert(h2tbuf != MAP_FAILED);
+   printf("Mapped T2H.\n");
 
-   /*Done.*/
-   /*Drain the channels.*/
+   /*Construct and initiate Send command*/
+   tilepci_xfer_req_t sndcmd = {
+      .addr = (uintptr_t)h2tbuf,
+      .len = msize,
+      .cookie = 0,
+   };
+   while (write(h2tfd, &sndcmd, sizeof(sndcmd)) != sizeof(sndcmd));
+   printf("Written\n");
+
+   /*Read back the completion status.*/
    tilepci_xfer_comp_t comp;
-   while (read(ifd, &comp, sizeof(comp)) != sizeof(comp));
-   while (read(ofd, &comp, sizeof(comp)) != sizeof(comp));
+   while (read(h2tfd, &comp, sizeof(comp)) != sizeof(comp));
+   
    /*Exit.*/
-   close(ifd);
-   close(ofd);
+   printf("Done.\n");
+   close(h2tfd);
    return 0;
 }
 

@@ -38,6 +38,7 @@
 static tmc_sync_barrier_t syncbar;
 static tmc_spin_barrier_t spinbar;
 
+#if 0
 /******************************************************************************/
 static void* t2h_thread(void *arg)
 /******************************************************************************/
@@ -45,7 +46,7 @@ static void* t2h_thread(void *arg)
    const char* path = "/dev/trio0-mac0/t2h/0";
    int fd; /*File Descriptor*/
 
-   tmc_sync_barrier_wait(&syncbar);
+   // tmc_sync_barrier_wait(&syncbar);
 
    if ((fd = open(path, O_RDWR)) < 0) {
       printf("Failed to open %s (errno=%d)\n", path, errno);
@@ -61,68 +62,56 @@ static void* t2h_thread(void *arg)
    close(fd);
    return NULL;
 }
+#endif
 
 /******************************************************************************/
 static void* h2t_thread(void *arg)
 /******************************************************************************/
 {
    const char* path = "/dev/trio0-mac0/h2t/0";
-   int c, n; /*Return code, Number of bytes*/
+   // int c, n; /*Return code, Number of bytes*/
+   int c; /*Return code*/
    int fd; /*File descriptor*/
    char *mbuf; /*Message buffer*/
    int msize = 4096; /*Message size*/
 
-   tmc_sync_barrier_wait(&syncbar);
-   /*Open the channel.*/
-   if ((fd = open(path, O_RDWR)) < 0) {
+   // tmc_sync_barrier_wait(&syncbar);
+   /*Open the H2T channel.*/
+   // if ((fd = open(path, O_RDWR)) < 0) {
+   if ((fd = open(path, O_RDWR|O_NONBLOCK)) < 0) {
       printf("Failed to open %s (errno=%d)\n", path, errno);
       abort();
    }
-   printf("Opened %s\n", path);
+   printf("Opened H2T\n");
    /*Allocate message buffer and register it to TRIO.*/
-   mbuf = memalign(getpagesize(), msize);
+   mbuf = memalign(getpagesize(), msize);  assert(mbuf != NULL);
    tilegxpci_buf_info_t bufd = { /*Buffer descriptor*/
       .va = (uintptr_t)mbuf,
       .size = getpagesize(),
    };
-   if (ioctl(fd, TILEPCI_IOC_REG_BUF, &bufd) != 0) {
-      printf("Failed to ioctl on %s (errno=%d)\n", path, errno);
-      abort();
-   }
-   /*Initialize the Message.*/
-   tilepci_xfer_req_t msgd = { /*Message descriptor*/
+   c = ioctl(fd, TILEPCI_IOC_REG_BUF, &bufd);  assert(c == 0);
+#if 0
+   /*Make file descriptor being non-blocking.*/
+   int flags;
+   flags = fcntl(fd, F_GETFL, 0);
+   fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#endif
+   /*Construct receive command and post it to the PCI.*/
+   tilepci_xfer_req_t rxcmd = { /*Rx Command descriptor*/
       .addr = (uintptr_t)mbuf,
       .len = msize,
       .cookie = 0,
    };
-#if 1
-   struct pollfd fds; /*Poll descriptor*/
-   memset(&fds, 0, sizeof(fds)); 
-   fds.fd = fd;
-   fds.events = POLLIN;
-   while (1) {
-      // c = poll(&fds, 1, WAITFOREVER); /*Wait until an event arrives*/
-      c = poll(&fds, 1, 3000); /*Wait for event during 1 sec.*/
-      if (c < 0) {
-         printf("Poll failed (errno=%d)\n", errno);
-         break;
-      }
-      else if (c == 0) {
-         n = write(fd, &msgd, sizeof(msgd));
-         if (n != sizeof(msgd)) {
-            printf("Write failed (n=%d errno=%d)\n", n, errno);
-         }
-         else {
-            printf("Write succeded. n=%d errno=%d\n", n, errno);
-         }
-      }
-      else {
-         if (fds.events == POLLIN) {
-             printf("Poll: c=%d\n", c);
-         }
-      }
-   }
-#endif
+   while (write(fd, &rxcmd, sizeof(rxcmd)) != sizeof(rxcmd));
+   printf("Written.\n");
+
+   /*Read back the completion.*/
+   tilepci_xfer_comp_t comp; /*Completion status*/
+   while (read(fd, &comp, sizeof(comp)) != sizeof(comp));
+
+   /*Processed the received data.*/
+   printf("Got message\n");
+
    close(fd);
    return NULL;
 }
@@ -134,18 +123,22 @@ int main(int argc, char** argv)
    int i; /*Index*/
    pthread_t tid[2]; /*Processes ID*/
 
-  tmc_sync_barrier_init(&syncbar, 2);
-  tmc_spin_barrier_init(&spinbar, 2);
+   tmc_sync_barrier_init(&syncbar, 2);
+   tmc_spin_barrier_init(&spinbar, 2);
 
-  if (pthread_create(&tid[0], NULL, h2t_thread, NULL) != 0) {
-     tmc_task_die("Failed to create H2T thread\n");
-  } 
-  if (pthread_create(&tid[1], NULL, t2h_thread, NULL) != 0) {
-     tmc_task_die("Failed to create T2H thread\n");
-  } 
-  for (i = 0; i < 2; i++) {
-     pthread_join(tid[i], NULL);
-  }
+   if (pthread_create(&tid[0], NULL, h2t_thread, NULL) != 0) {
+      tmc_task_die("Failed to create H2T thread\n");
+   } 
+#if 0
+   if (pthread_create(&tid[1], NULL, t2h_thread, NULL) != 0) {
+      tmc_task_die("Failed to create T2H thread\n");
+   } 
+#endif
+   // for (i = 0; i < 2; i++) {
+   for (i = 0; i < 1; i++) {
+      pthread_join(tid[i], NULL);
+   }
+   printf("Done.\n");
    return 0;
 }
 
