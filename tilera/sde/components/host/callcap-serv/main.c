@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
    void *h2tbuf; /*Output and Input Message buffers*/
    int msize = 4096; /*Message size*/
    // int n; /*Number*/
+   int i; /*Index*/
 
    /*H2T channel.*/
    if ((h2tfd = open(h2tpath, O_RDWR)) < 0) {
@@ -39,7 +40,6 @@ int main(int argc, char *argv[])
    printf("Opened T2H.\n");
    h2tbuf = mmap(0, msize, PROT_READ|PROT_WRITE, MAP_SHARED, h2tfd, 0);
    assert(h2tbuf != MAP_FAILED);
-   printf("Mapped T2H.\n");
 
    /*Construct and initiate Send command*/
    tilepci_xfer_req_t sndcmd = {
@@ -47,12 +47,24 @@ int main(int argc, char *argv[])
       .len = msize,
       .cookie = 0,
    };
+#if 0
    while (write(h2tfd, &sndcmd, sizeof(sndcmd)) != sizeof(sndcmd));
    printf("Written\n");
 
    /*Read back the completion status.*/
    tilepci_xfer_comp_t comp;
    while (read(h2tfd, &comp, sizeof(comp)) != sizeof(comp));
+#endif
+#if 1
+   for (i = 0; i < 4; i++) {
+      while (write(h2tfd, &sndcmd, sizeof(sndcmd)) != sizeof(sndcmd));
+      printf("Written %d\n", i);
+
+      /*Read back the completion status.*/
+      tilepci_xfer_comp_t comp;
+      while (read(h2tfd, &comp, sizeof(comp)) != sizeof(comp));
+   }
+#endif
    
    /*Exit.*/
    printf("Done.\n");

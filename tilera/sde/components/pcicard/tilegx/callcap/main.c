@@ -70,6 +70,7 @@ static void* h2t_thread(void *arg)
 {
    const char* path = "/dev/trio0-mac0/h2t/0";
    // int c, n; /*Return code, Number of bytes*/
+   int i; /*Index*/
    int c; /*Return code*/
    int fd; /*File descriptor*/
    char *mbuf; /*Message buffer*/
@@ -102,6 +103,7 @@ static void* h2t_thread(void *arg)
       .len = msize,
       .cookie = 0,
    };
+#if 0
    while (write(fd, &rxcmd, sizeof(rxcmd)) != sizeof(rxcmd));
    printf("Written.\n");
 
@@ -111,6 +113,18 @@ static void* h2t_thread(void *arg)
 
    /*Processed the received data.*/
    printf("Got message\n");
+#endif
+#if 1
+   for (i = 0; i < 4; i++) {
+      while (write(fd, &rxcmd, sizeof(rxcmd)) != sizeof(rxcmd));
+      printf("Written.\n");
+
+      /*Read back the completion.*/
+      tilepci_xfer_comp_t comp; /*Completion status*/
+      while (read(fd, &comp, sizeof(comp)) != sizeof(comp));
+      printf("Got message %d\n", i);
+   }
+#endif
 
    close(fd);
    return NULL;
