@@ -1,6 +1,8 @@
 #!/bin/sh
-tile-monitor --hvx TLR_NETWORK=gbe1,gbe2,gbe3,gbe4 --hvd POST=quick \
+tile-monitor --hvx TLR_NETWORK=none --hvd POST=quick \
   --upload-tile-libs gxpci \
   --upload callcap /root/callcap \
-  -- /root/callcap
+  --quit
+
+#  -- /root/callcap
  

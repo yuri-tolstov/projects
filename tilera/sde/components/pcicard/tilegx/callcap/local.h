@@ -7,6 +7,7 @@
 
 void* h2t_thread(void *arg);
 void* t2h_thread(void *arg);
+void* net_thread(void *arg);
 
 /*----------------------------------------------------------------------------*/
 #endif /*__LOCAL_H__*/

@@ -52,7 +52,7 @@ static void* h2t_thread(void *arg)
       while (read(fd, &comp, sizeof(comp)) != sizeof(comp));
 
       printf("H2T: Written %d\n", i);
-      sleep(3);
+      sleep(10);
       i++;
    }
    /*Exit.*/
