@@ -95,12 +95,14 @@ int main(int argc, char** argv)
 #endif
    }
    /*Allocate notification rings.*/
-   if ((c = gxio_mpipe_alloc_notif_rings(mpipec, NUMNETTHRS, 0, 0)) < 0) {
-      tmc_task_die("Failed to alloc notif. rings.");
-   }
+   unsigned int ring;
    size_t notif_ring_entries = 512;
    size_t notif_ring_size = notif_ring_entries * sizeof(gxio_mpipe_idesc_t);
    size_t needed = notif_ring_size + sizeof(gxio_mpipe_iqueue_t);
+
+   if ((ring = gxio_mpipe_alloc_notif_rings(mpipec, NUMNETTHRS, 0, 0)) < 0) {
+      tmc_task_die("Failed to alloc notif. rings.");
+   }
    for (int i = 0; i < NUMNETTHRS; i++) {
       tmc_alloc_t alloc = TMC_ALLOC_INIT;
       tmc_alloc_set_home(&alloc, tmc_cpus_find_nth_cpu(&cpus, i));
