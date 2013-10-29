@@ -94,7 +94,7 @@ int main(int argc, char** argv)
       gxio_mpipe_link_set_addr(&link, GXIO_MPIPE_LINK_RECEIVE_JUMBO, 1);
 #endif
    }
-   /*Allocate notification rings.*/
+   /*Allocate and initialize notification rings.*/
    unsigned int ring;
    size_t notif_ring_entries = 512;
    size_t notif_ring_size = notif_ring_entries * sizeof(gxio_mpipe_idesc_t);
@@ -120,7 +120,26 @@ int main(int argc, char** argv)
       }
       iqueues[i] = iqueue;
    }
-   //TODO:
+   /*Allocate NotifGroup.*/
+   int group;
+   if ((group = gxio_mpipe_alloc_notif_groups(mpipec, 1, 0, 0)) < 0) {
+      tmc_task_die("Failed to alloc notif. groups.");
+   }
+
+  // Allocate some buckets. The default mPipe classifier requires
+  // the number of buckets to be a power of two (maximum of 4096).
+  int num_buckets = 1024;
+  result = gxio_mpipe_alloc_buckets(mpipec, num_buckets, 0, 0);
+  VERIFY(result, "gxio_mpipe_alloc_buckets()");
+  int bucket = result;
+
+  // Init group and buckets, preserving packet order among flows.
+  gxio_mpipe_bucket_mode_t mode = GXIO_MPIPE_BUCKET_DYNAMIC_FLOW_AFFINITY;
+  result = gxio_mpipe_init_notif_group_and_buckets(mpipec, group,
+                                                   ring, NUMNETTHRS,
+                                                   bucket, num_buckets, mode);
+  VERIFY(result, "gxio_mpipe_init_notif_group_and_buckets()");
+
 
 
 
