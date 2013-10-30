@@ -43,6 +43,8 @@ static int chann[NUMLINKS]; /*Channels*/
 static int mpipei; /*mPIPE instance*/
 static gxio_mpipe_context_t mpipecd; /*mPIPE context (shared by all CPUs)*/
 static gxio_mpipe_context_t* const mpipec = &mpipecd;
+static gxio_mpipe_iqueue_t* iqueues[NUMLINKS];
+
 
 /******************************************************************************/
 int main(int argc, char** argv)
@@ -68,12 +70,15 @@ int main(int argc, char** argv)
    if (tmc_cpus_count(&cpus) < NUMNETTHRS) {
       tmc_task_die("Insufficient cpus.");
    }
+   /*-------------------------------------------------------------------------*/
+   /* mPIPE initialization.                                                   */
+   /*-------------------------------------------------------------------------*/
    /*Check links and get the mPIPE instance.*/
    for (i = 0; i < NUMLINKS; i++) {
       if ((c = gxio_mpipe_link_instance(lname[i])) < 0) {
          tmc_task_die("Link '%s' does not exist.", lname[i]);
       }
-      if (mpipei == 0) mpipei = c;
+      if (i == 0) mpipei = c;
       else if (c != mpipei) {
          tmc_task_die("Link '%s' uses diff. mPIPE instance.", lname[i]);
       }
@@ -94,6 +99,9 @@ int main(int argc, char** argv)
       gxio_mpipe_link_set_addr(&link, GXIO_MPIPE_LINK_RECEIVE_JUMBO, 1);
 #endif
    }
+   /*-------------------------------------------------------------------------*/
+   /* mPIPE ingress path.                                                     */
+   /*-------------------------------------------------------------------------*/
    /*Allocate and initialize notification rings.*/
    unsigned int ring;
    size_t notif_ring_entries = 512;
@@ -103,7 +111,7 @@ int main(int argc, char** argv)
    if ((ring = gxio_mpipe_alloc_notif_rings(mpipec, NUMNETTHRS, 0, 0)) < 0) {
       tmc_task_die("Failed to alloc notif. rings.");
    }
-   for (int i = 0; i < NUMNETTHRS; i++) {
+   for (i = 0; i < NUMNETTHRS; i++) {
       tmc_alloc_t alloc = TMC_ALLOC_INIT;
       tmc_alloc_set_home(&alloc, tmc_cpus_find_nth_cpu(&cpus, i));
       /*The ring must use physically contiguous memory, but the iqueue
@@ -141,6 +149,13 @@ int main(int argc, char** argv)
   VERIFY(result, "gxio_mpipe_init_notif_group_and_buckets()");
 
 
+
+
+
+
+   /*-------------------------------------------------------------------------*/
+   /* mPIPE egress path.                                                      */
+   /*-------------------------------------------------------------------------*/
 
 
 
