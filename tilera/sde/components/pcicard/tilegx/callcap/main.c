@@ -39,11 +39,13 @@
 static tmc_sync_barrier_t syncbar;
 static tmc_spin_barrier_t spinbar;
 static char* lname[NUMLINKS]; /*Net links*/
-static int chann[NUMLINKS]; /*Channels*/
+static int channels[NUMLINKS]; /*Channels*/
 static int mpipei; /*mPIPE instance*/
 static gxio_mpipe_context_t mpipecd; /*mPIPE context (shared by all CPUs)*/
 static gxio_mpipe_context_t* const mpipec = &mpipecd;
-static gxio_mpipe_iqueue_t* iqueues[NUMLINKS];
+static gxio_mpipe_iqueue_t* iqueues[NUMLINKS]; /*mPIPE ingress queues*/
+static gxio_mpipe_equeue_t* equeues; /*mPIPE egress queues*/
+
 
 
 /******************************************************************************/
@@ -93,7 +95,7 @@ int main(int argc, char** argv)
       if (gxio_mpipe_link_open(&link, mpipec, lname[i], 0) < 0) {
          tmc_task_die("Failed to open link %s.", lname[i]);
       } 
-      chann[i] = gxio_mpipe_link_channel(&link);
+      channels[i] = gxio_mpipe_link_channel(&link);
 #if 0
       /*Allow to receive jumbo packets.*/
       gxio_mpipe_link_set_addr(&link, GXIO_MPIPE_LINK_RECEIVE_JUMBO, 1);
@@ -133,20 +135,87 @@ int main(int argc, char** argv)
    if ((group = gxio_mpipe_alloc_notif_groups(mpipec, 1, 0, 0)) < 0) {
       tmc_task_die("Failed to alloc notif. groups.");
    }
+   /*Allocate some buckets. The default mPipe classifier requires
+    *the number of buckets to be a power of two (maximum of 4096).*/
+   int bucket;
+   int num_buckets = 1024;
+   if (( bucket = gxio_mpipe_alloc_buckets(mpipec, num_buckets, 0, 0)) < 0) {
+      tmc_task_die("Failed to alloc buckets.");
+   }
+   /*Map group and buckets, preserving packet order among flows.*/
+   for (i = 0; i < NUMLINKS; i++) {
+      gxio_mpipe_bucket_mode_t mode = GXIO_MPIPE_BUCKET_DYNAMIC_FLOW_AFFINITY;
+      if (gxio_mpipe_init_notif_group_and_buckets(mpipec, group,
+                                                  ring, NUMNETTHRS,
+                                                  bucket, num_buckets, mode) < 0) {
+         tmc_task_die("Failed to map groups and buckets.");
+      }
+   }
+   /*-------------------------------------------------------------------------*/
+   /* mPIPE egress path.                                                      */
+   /*-------------------------------------------------------------------------*/
+   uint edma;
+   if ((edma = gxio_mpipe_alloc_edma_rings(context, num_links + 1, 0, 0)) < 0) {
+      tmc_task_die("Failed to alloc eDMA rings.");
+   }
+   if ((equeues = calloc(NUMLINKS, sizeof(*equeues))) == NULL) {
+      tmc_task_die("Failed in calloc.");
+   }
+   for (int i = 0; i < NUMLINKS; i++) {
+      size_t equeue_size = equeue_entries * sizeof(gxio_mpipe_edesc_t);
+      tmc_alloc_t alloc = TMC_ALLOC_INIT;
+      tmc_alloc_set_pagesize(&alloc, equeue_size);
+      void* equeue_mem = tmc_alloc_map(&alloc, equeue_size);
+      if (equeue_mem == NULL) {
+         tmc_task_die("Failure in tmc_alloc_map.");
+      }
+      if (gxio_mpipe_equeue_init(&equeues[i], context, edma + i, channels[i],
+                                 equeue_mem, equeue_size, 0) < 0) {
+         tmc_task_die("Failed in mpipe_enqueue_init.");
+      }
+   }
+   /*Allocate one huge page to hold the buffer stack, and all the
+    *packets. This should be more than enough space.*/
+   size_t page_size = tmc_alloc_get_huge_pagesize();
+   tmc_alloc_t alloc = TMC_ALLOC_INIT;
+   tmc_alloc_set_huge(&alloc);
+   void* page = tmc_alloc_map(&alloc, page_size);  assert(page);
+   void* mem = page;
 
-  // Allocate some buckets. The default mPipe classifier requires
-  // the number of buckets to be a power of two (maximum of 4096).
-  int num_buckets = 1024;
-  result = gxio_mpipe_alloc_buckets(mpipec, num_buckets, 0, 0);
-  VERIFY(result, "gxio_mpipe_alloc_buckets()");
-  int bucket = result;
 
-  // Init group and buckets, preserving packet order among flows.
-  gxio_mpipe_bucket_mode_t mode = GXIO_MPIPE_BUCKET_DYNAMIC_FLOW_AFFINITY;
-  result = gxio_mpipe_init_notif_group_and_buckets(mpipec, group,
-                                                   ring, NUMNETTHRS,
-                                                   bucket, num_buckets, mode);
-  VERIFY(result, "gxio_mpipe_init_notif_group_and_buckets()");
+
+
+
+
+
+
+
+
+   /*-------------------------------------------------------------------------*/
+   /* Buffers and Stacks.                                                     */
+   /*-------------------------------------------------------------------------*/
+   int stack_idx;
+   /*Allocate two buffer stacks.*/
+   if ((stack_idx = gxio_mpipe_alloc_buffer_stacks(context, 2, 0, 0)) < 0) {
+      tmc_task_die("Failed to alloc buffer stacks.");
+   }
+   /*Initialize the buffer stacks*/
+   unsigned int num_buffers = 1000;
+   size_t stack_bytes = gxio_mpipe_calc_buffer_stack_bytes(num_buffers);
+   gxio_mpipe_buffer_size_enum_t small_size = GXIO_MPIPE_BUFFER_SIZE_256;
+   ALIGN(mem, 0x10000);
+  result = gxio_mpipe_init_buffer_stack(context, stack_idx + 0, small_size,
+                                        mem, stack_bytes, 0);
+  mem += stack_bytes;
+
+  gxio_mpipe_buffer_size_enum_t large_size = GXIO_MPIPE_BUFFER_SIZE_1664;
+  ALIGN(mem, 0x10000);
+  result = gxio_mpipe_init_buffer_stack(context, stack_idx + 1, large_size,
+                                        mem, stack_bytes, 0);
+  VERIFY(result, "gxio_mpipe_init_buffer_stack()");
+  mem += stack_bytes;
+
+
 
 
 
