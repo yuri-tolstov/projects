@@ -130,6 +130,7 @@ int main(int argc, char** argv)
       }
       iqueues[i] = iqueue;
    }
+#if 0
    /*Allocate NotifGroup.*/
    int group;
    if ((group = gxio_mpipe_alloc_notif_groups(mpipec, 1, 0, 0)) < 0) {
@@ -151,6 +152,7 @@ int main(int argc, char** argv)
          tmc_task_die("Failed to map groups and buckets.");
       }
    }
+#endif
    /*-------------------------------------------------------------------------*/
    /* mPIPE egress path.                                                      */
    /*-------------------------------------------------------------------------*/
@@ -181,16 +183,31 @@ int main(int argc, char** argv)
    tmc_alloc_set_huge(&alloc);
    void* page = tmc_alloc_map(&alloc, page_size);  assert(page);
    void* mem = page;
-
-
-
-
-
-
-
-
-
-
+#if 1
+   /*-------------------------------------------------------------------------*/
+   /* Notification groups.                                                    */
+   /*-------------------------------------------------------------------------*/
+   int group;
+   if ((group = gxio_mpipe_alloc_notif_groups(mpipec, 1, 0, 0)) < 0) {
+      tmc_task_die("Failed to alloc notif. groups.");
+   }
+   /*Allocate some buckets. The default mPipe classifier requires
+    *the number of buckets to be a power of two (maximum of 4096).*/
+   int bucket;
+   int num_buckets = 1024; //NUMLINKS
+   if ((bucket = gxio_mpipe_alloc_buckets(mpipec, num_buckets, 0, 0)) < 0) {
+      tmc_task_die("Failed to alloc buckets.");
+   }
+   /*Map group and buckets, preserving packet order among flows.*/
+   for (i = 0; i < NUMLINKS; i++) {
+      gxio_mpipe_bucket_mode_t mode = GXIO_MPIPE_BUCKET_DYNAMIC_FLOW_AFFINITY;
+      if (gxio_mpipe_init_notif_group_and_buckets(mpipec, group,
+                                                  ring, NUMNETTHRS,
+                                                  bucket, num_buckets, mode) < 0) {
+         tmc_task_die("Failed to map groups and buckets.");
+      }
+   }
+#endif
    /*-------------------------------------------------------------------------*/
    /* Buffers and Stacks.                                                     */
    /*-------------------------------------------------------------------------*/
@@ -204,40 +221,59 @@ int main(int argc, char** argv)
    size_t stack_bytes = gxio_mpipe_calc_buffer_stack_bytes(num_buffers);
    gxio_mpipe_buffer_size_enum_t small_size = GXIO_MPIPE_BUFFER_SIZE_256;
    ALIGN(mem, 0x10000);
-  result = gxio_mpipe_init_buffer_stack(context, stack_idx + 0, small_size,
-                                        mem, stack_bytes, 0);
-  mem += stack_bytes;
+   if (gxio_mpipe_init_buffer_stack(context, stack_idx + 0, small_size,
+                                    mem, stack_bytes, 0) < 0) {
+      tmc_task_die("Failed to init buffer stack.");
+   }
+   mem += stack_bytes;
+   gxio_mpipe_buffer_size_enum_t large_size = GXIO_MPIPE_BUFFER_SIZE_1664;
+   ALIGN(mem, 0x10000);
+   if (gxio_mpipe_init_buffer_stack(context, stack_idx + 1, large_size,
+                                    mem, stack_bytes, 0) < 0) {
+      tmc_task_die("Failed to init buffer stack.");
+   }
+   mem += stack_bytes;
 
-  gxio_mpipe_buffer_size_enum_t large_size = GXIO_MPIPE_BUFFER_SIZE_1664;
-  ALIGN(mem, 0x10000);
-  result = gxio_mpipe_init_buffer_stack(context, stack_idx + 1, large_size,
-                                        mem, stack_bytes, 0);
-  VERIFY(result, "gxio_mpipe_init_buffer_stack()");
-  mem += stack_bytes;
-
-
-
-
-
-
-
-
+   /*Register the entire huge page of memory which contains all the buffers.*/
+   if (gxio_mpipe_register_page(context, stack_idx+0, page, page_size, 0) < 0) {
+      tmc_task_die("Failed to register page.");
+   }
+   if (gxio_mpipe_register_page(context, stack_idx+1, page, page_size, 0) < 0) {
+      tmc_task_die("Failed to register page.");
+   }
+   /*Push some buffers onto the stacks.*/
+   ALIGN(mem, 0x10000);
+   for (i = 0; i < num_buffers; i++) {
+      gxio_mpipe_push_buffer(context, stack_idx + 0, mem);
+      mem += 256;
+   }
+   ALIGN(mem, 0x10000);
+   for (i = 0; i < num_buffers; i++) {
+      gxio_mpipe_push_buffer(context, stack_idx + 1, mem);
+      mem += 1664;
+   }
    /*-------------------------------------------------------------------------*/
-   /* mPIPE egress path.                                                      */
+   /* Register for packets.                                                   */
    /*-------------------------------------------------------------------------*/
-
-
-
-
- 
-
-
-
-
-
-
-
-
+   gxio_mpipe_rules_t rules;
+   gxio_mpipe_rules_init(&rules, context);
+   for (i = 0; i < num_links + 1; i++) {
+      gxio_mpipe_rules_begin(&rules, bucket + i, 1, NULL);
+      /*Listen to the primary links.*/
+      for (int k = 0; k < num_links; k++) {
+         gxio_mpipe_rules_add_channel(&rules, channels[k]);
+      }
+      /*The non-catchall rules only handle a single dmac.*/
+      if (i < num_links) {
+         gxio_mpipe_rules_add_dmac(&rules, dmacs[i]);
+      }
+   }
+   if (gxio_mpipe_rules_commit(&rules) < 0) {
+      tmc_task_die("Failed to commit rules.");
+   }
+   /*Line up.*/
+   tmc_sync_barrier_init(&sync_barrier, num_links);
+   tmc_spin_barrier_init(&spin_barrier, num_links);
 
    /*-------------------------------------------------------------------------*/
    /* Create and run working threads.                                         */
