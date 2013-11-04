@@ -36,6 +36,9 @@
 #define NUMNETTHRS  4  /*Number of network threads*/
 #define NUMTHREADS (2/*Control*/ + NUMNETTHRS) /*Total number of threads*/
 
+/*Align p mod align, assuming p is a void*/
+#define ALIGN(p, align) do { (p) += -(long)(p) & ((align) - 1); } while(0)
+
 static tmc_sync_barrier_t syncbar;
 static tmc_spin_barrier_t spinbar;
 static char* lname[NUMLINKS]; /*Net links*/
@@ -45,6 +48,8 @@ static gxio_mpipe_context_t mpipecd; /*mPIPE context (shared by all CPUs)*/
 static gxio_mpipe_context_t* const mpipec = &mpipecd;
 static gxio_mpipe_iqueue_t* iqueues[NUMLINKS]; /*mPIPE ingress queues*/
 static gxio_mpipe_equeue_t* equeues; /*mPIPE egress queues*/
+static unsigned int equeue_entries = 2048; /*The number of entries in the equeue ring.*/
+static gxio_mpipe_rules_dmac_t dmacs[4]; /*The dmacs for each link.*/
 
 
 
@@ -157,7 +162,7 @@ int main(int argc, char** argv)
    /* mPIPE egress path.                                                      */
    /*-------------------------------------------------------------------------*/
    uint edma;
-   if ((edma = gxio_mpipe_alloc_edma_rings(context, num_links + 1, 0, 0)) < 0) {
+   if ((edma = gxio_mpipe_alloc_edma_rings(mpipec, NUMLINKS, 0, 0)) < 0) {
       tmc_task_die("Failed to alloc eDMA rings.");
    }
    if ((equeues = calloc(NUMLINKS, sizeof(*equeues))) == NULL) {
@@ -171,7 +176,7 @@ int main(int argc, char** argv)
       if (equeue_mem == NULL) {
          tmc_task_die("Failure in tmc_alloc_map.");
       }
-      if (gxio_mpipe_equeue_init(&equeues[i], context, edma + i, channels[i],
+      if (gxio_mpipe_equeue_init(&equeues[i], mpipec, edma + i, channels[i],
                                  equeue_mem, equeue_size, 0) < 0) {
          tmc_task_die("Failed in mpipe_enqueue_init.");
       }
@@ -213,7 +218,7 @@ int main(int argc, char** argv)
    /*-------------------------------------------------------------------------*/
    int stack_idx;
    /*Allocate two buffer stacks.*/
-   if ((stack_idx = gxio_mpipe_alloc_buffer_stacks(context, 2, 0, 0)) < 0) {
+   if ((stack_idx = gxio_mpipe_alloc_buffer_stacks(mpipec, 2, 0, 0)) < 0) {
       tmc_task_die("Failed to alloc buffer stacks.");
    }
    /*Initialize the buffer stacks*/
@@ -221,50 +226,50 @@ int main(int argc, char** argv)
    size_t stack_bytes = gxio_mpipe_calc_buffer_stack_bytes(num_buffers);
    gxio_mpipe_buffer_size_enum_t small_size = GXIO_MPIPE_BUFFER_SIZE_256;
    ALIGN(mem, 0x10000);
-   if (gxio_mpipe_init_buffer_stack(context, stack_idx + 0, small_size,
+   if (gxio_mpipe_init_buffer_stack(mpipec, stack_idx + 0, small_size,
                                     mem, stack_bytes, 0) < 0) {
       tmc_task_die("Failed to init buffer stack.");
    }
    mem += stack_bytes;
    gxio_mpipe_buffer_size_enum_t large_size = GXIO_MPIPE_BUFFER_SIZE_1664;
    ALIGN(mem, 0x10000);
-   if (gxio_mpipe_init_buffer_stack(context, stack_idx + 1, large_size,
+   if (gxio_mpipe_init_buffer_stack(mpipec, stack_idx + 1, large_size,
                                     mem, stack_bytes, 0) < 0) {
       tmc_task_die("Failed to init buffer stack.");
    }
    mem += stack_bytes;
 
    /*Register the entire huge page of memory which contains all the buffers.*/
-   if (gxio_mpipe_register_page(context, stack_idx+0, page, page_size, 0) < 0) {
+   if (gxio_mpipe_register_page(mpipec, stack_idx+0, page, page_size, 0) < 0) {
       tmc_task_die("Failed to register page.");
    }
-   if (gxio_mpipe_register_page(context, stack_idx+1, page, page_size, 0) < 0) {
+   if (gxio_mpipe_register_page(mpipec, stack_idx+1, page, page_size, 0) < 0) {
       tmc_task_die("Failed to register page.");
    }
    /*Push some buffers onto the stacks.*/
    ALIGN(mem, 0x10000);
    for (i = 0; i < num_buffers; i++) {
-      gxio_mpipe_push_buffer(context, stack_idx + 0, mem);
+      gxio_mpipe_push_buffer(mpipec, stack_idx + 0, mem);
       mem += 256;
    }
    ALIGN(mem, 0x10000);
    for (i = 0; i < num_buffers; i++) {
-      gxio_mpipe_push_buffer(context, stack_idx + 1, mem);
+      gxio_mpipe_push_buffer(mpipec, stack_idx + 1, mem);
       mem += 1664;
    }
    /*-------------------------------------------------------------------------*/
    /* Register for packets.                                                   */
    /*-------------------------------------------------------------------------*/
    gxio_mpipe_rules_t rules;
-   gxio_mpipe_rules_init(&rules, context);
-   for (i = 0; i < num_links + 1; i++) {
+   gxio_mpipe_rules_init(&rules, mpipec);
+   for (i = 0; i < NUMLINKS; i++) {
       gxio_mpipe_rules_begin(&rules, bucket + i, 1, NULL);
-      /*Listen to the primary links.*/
-      for (int k = 0; k < num_links; k++) {
+      /*Listen to the primary links.*/  //TODO: What it is for?
+      for (int k = 0; k < NUMLINKS; k++) {
          gxio_mpipe_rules_add_channel(&rules, channels[k]);
       }
       /*The non-catchall rules only handle a single dmac.*/
-      if (i < num_links) {
+      if (i < NUMLINKS) {
          gxio_mpipe_rules_add_dmac(&rules, dmacs[i]);
       }
    }
@@ -272,8 +277,8 @@ int main(int argc, char** argv)
       tmc_task_die("Failed to commit rules.");
    }
    /*Line up.*/
-   tmc_sync_barrier_init(&sync_barrier, num_links);
-   tmc_spin_barrier_init(&spin_barrier, num_links);
+   tmc_sync_barrier_init(&syncbar, NUMLINKS);
+   tmc_spin_barrier_init(&spinbar, NUMLINKS);
 
    /*-------------------------------------------------------------------------*/
    /* Create and run working threads.                                         */
