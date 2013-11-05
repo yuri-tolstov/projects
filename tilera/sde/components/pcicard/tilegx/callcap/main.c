@@ -41,7 +41,7 @@
 
 static tmc_sync_barrier_t syncbar;
 static tmc_spin_barrier_t spinbar;
-static char* lname[NUMLINKS]; /*Net links*/
+static char* lnames[NUMLINKS]; /*Net links*/
 static int channels[NUMLINKS]; /*Channels*/
 static int mpipei; /*mPIPE instance*/
 static gxio_mpipe_context_t mpipecd; /*mPIPE context (shared by all CPUs)*/
@@ -65,10 +65,10 @@ int main(int argc, char** argv)
    /*-------------------------------------------------------------------------*/
    /* Defaults and initialization.                                            */
    /*-------------------------------------------------------------------------*/
-   lname[0] = "gbe0"; lname[1] = "gbe1"; lname[2] = "gbe2"; lname[3] = "gbe3";
+   lnames[0] = "gbe0"; lnames[1] = "gbe1"; lnames[2] = "gbe2"; lnames[3] = "gbe3";
    mpipei = 0;
-   tmc_sync_barrier_init(&syncbar, 2);
-   tmc_spin_barrier_init(&spinbar, 2);
+   tmc_sync_barrier_init(&syncbar, NUMLINKS);
+   tmc_spin_barrier_init(&spinbar, NUMLINKS);
 
    /*Determine available CPUs.*/
    if (tmc_cpus_get_my_affinity(&cpus) < 0) {
@@ -82,12 +82,12 @@ int main(int argc, char** argv)
    /*-------------------------------------------------------------------------*/
    /*Check links and get the mPIPE instance.*/
    for (i = 0; i < NUMLINKS; i++) {
-      if ((c = gxio_mpipe_link_instance(lname[i])) < 0) {
-         tmc_task_die("Link '%s' does not exist.", lname[i]);
+      if ((c = gxio_mpipe_link_instance(lnames[i])) < 0) {
+         tmc_task_die("Link '%s' does not exist.", lnames[i]);
       }
       if (i == 0) mpipei = c;
       else if (c != mpipei) {
-         tmc_task_die("Link '%s' uses diff. mPIPE instance.", lname[i]);
+         tmc_task_die("Link '%s' uses diff. mPIPE instance.", lnames[i]);
       }
    }
    /*Start the driver.*/
@@ -97,8 +97,8 @@ int main(int argc, char** argv)
    /*Open the links.*/
    for (i = 0; i < NUMLINKS; i++) {
       gxio_mpipe_link_t link;
-      if (gxio_mpipe_link_open(&link, mpipec, lname[i], 0) < 0) {
-         tmc_task_die("Failed to open link %s.", lname[i]);
+      if (gxio_mpipe_link_open(&link, mpipec, lnames[i], 0) < 0) {
+         tmc_task_die("Failed to open link %s.", lnames[i]);
       } 
       channels[i] = gxio_mpipe_link_channel(&link);
 #if 0
@@ -119,45 +119,22 @@ int main(int argc, char** argv)
       tmc_task_die("Failed to alloc notif. rings.");
    }
    for (i = 0; i < NUMNETTHRS; i++) {
+      void* iqueue_mem;
       tmc_alloc_t alloc = TMC_ALLOC_INIT;
       tmc_alloc_set_home(&alloc, tmc_cpus_find_nth_cpu(&cpus, i));
       /*The ring must use physically contiguous memory, but the iqueue
        *can span pages, so we use "notif_ring_size", not "needed".*/
       tmc_alloc_set_pagesize(&alloc, notif_ring_size);
-      void* iqueue_mem = tmc_alloc_map(&alloc, needed);
-      if (iqueue_mem == NULL) {
+      if ((iqueue_mem = tmc_alloc_map(&alloc, needed)) == NULL) {
          tmc_task_die("Failed tmc_alloc_map.");
       }
       gxio_mpipe_iqueue_t* iqueue = iqueue_mem + notif_ring_size;
-      if ((c = gxio_mpipe_iqueue_init(iqueue, mpipec, ring + i,
-                                      iqueue_mem, notif_ring_size, 0)) < 0) {
+      if (gxio_mpipe_iqueue_init(iqueue, mpipec, ring + i,
+                                 iqueue_mem, notif_ring_size, 0) < 0) {
          tmc_task_die("Failed iqueue_init.");
       }
       iqueues[i] = iqueue;
    }
-#if 0
-   /*Allocate NotifGroup.*/
-   int group;
-   if ((group = gxio_mpipe_alloc_notif_groups(mpipec, 1, 0, 0)) < 0) {
-      tmc_task_die("Failed to alloc notif. groups.");
-   }
-   /*Allocate some buckets. The default mPipe classifier requires
-    *the number of buckets to be a power of two (maximum of 4096).*/
-   int bucket;
-   int num_buckets = 1024;
-   if (( bucket = gxio_mpipe_alloc_buckets(mpipec, num_buckets, 0, 0)) < 0) {
-      tmc_task_die("Failed to alloc buckets.");
-   }
-   /*Map group and buckets, preserving packet order among flows.*/
-   for (i = 0; i < NUMLINKS; i++) {
-      gxio_mpipe_bucket_mode_t mode = GXIO_MPIPE_BUCKET_DYNAMIC_FLOW_AFFINITY;
-      if (gxio_mpipe_init_notif_group_and_buckets(mpipec, group,
-                                                  ring, NUMNETTHRS,
-                                                  bucket, num_buckets, mode) < 0) {
-         tmc_task_die("Failed to map groups and buckets.");
-      }
-   }
-#endif
    /*-------------------------------------------------------------------------*/
    /* mPIPE egress path.                                                      */
    /*-------------------------------------------------------------------------*/
@@ -188,31 +165,29 @@ int main(int argc, char** argv)
    tmc_alloc_set_huge(&alloc);
    void* page = tmc_alloc_map(&alloc, page_size);  assert(page);
    void* mem = page;
-#if 1
    /*-------------------------------------------------------------------------*/
    /* Notification groups.                                                    */
    /*-------------------------------------------------------------------------*/
    int group;
-   if ((group = gxio_mpipe_alloc_notif_groups(mpipec, 1, 0, 0)) < 0) {
+   if ((group = gxio_mpipe_alloc_notif_groups(mpipec, NUMLINKS, 0, 0)) < 0) {
       tmc_task_die("Failed to alloc notif. groups.");
    }
    /*Allocate some buckets. The default mPipe classifier requires
     *the number of buckets to be a power of two (maximum of 4096).*/
    int bucket;
-   int num_buckets = 1024; //NUMLINKS
+   int num_buckets = NUMLINKS;
    if ((bucket = gxio_mpipe_alloc_buckets(mpipec, num_buckets, 0, 0)) < 0) {
       tmc_task_die("Failed to alloc buckets.");
    }
    /*Map group and buckets, preserving packet order among flows.*/
    for (i = 0; i < NUMLINKS; i++) {
       gxio_mpipe_bucket_mode_t mode = GXIO_MPIPE_BUCKET_DYNAMIC_FLOW_AFFINITY;
-      if (gxio_mpipe_init_notif_group_and_buckets(mpipec, group,
-                                                  ring, NUMNETTHRS,
-                                                  bucket, num_buckets, mode) < 0) {
+      if (gxio_mpipe_init_notif_group_and_buckets(mpipec, group + i,
+                                                  ring + i, NUMNETTHRS,
+                                                  bucket + i, num_buckets, mode) < 0) {
          tmc_task_die("Failed to map groups and buckets.");
       }
    }
-#endif
    /*-------------------------------------------------------------------------*/
    /* Buffers and Stacks.                                                     */
    /*-------------------------------------------------------------------------*/
@@ -276,9 +251,6 @@ int main(int argc, char** argv)
    if (gxio_mpipe_rules_commit(&rules) < 0) {
       tmc_task_die("Failed to commit rules.");
    }
-   /*Line up.*/
-   tmc_sync_barrier_init(&syncbar, NUMLINKS);
-   tmc_spin_barrier_init(&spinbar, NUMLINKS);
 
    /*-------------------------------------------------------------------------*/
    /* Create and run working threads.                                         */
