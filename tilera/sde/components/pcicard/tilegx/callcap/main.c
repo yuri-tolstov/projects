@@ -1,5 +1,5 @@
 /******************************************************************************/
-/* File:   main.c                                                             */
+/* File:   callcap/main.c                                                     */
 /******************************************************************************/
 #include <assert.h>
 #include <errno.h>
@@ -192,43 +192,43 @@ int main(int argc, char** argv)
    /* Buffers and Stacks.                                                     */
    /*-------------------------------------------------------------------------*/
    int stack_idx;
+   gxio_mpipe_buffer_size_enum_t bufsize;
+   unsigned int nbuffers = 1000;
    /*Allocate two buffer stacks.*/
    if ((stack_idx = gxio_mpipe_alloc_buffer_stacks(mpipec, 2, 0, 0)) < 0) {
       tmc_task_die("Failed to alloc buffer stacks.");
    }
    /*Initialize the buffer stacks*/
-   unsigned int num_buffers = 1000;
-   size_t stack_bytes = gxio_mpipe_calc_buffer_stack_bytes(num_buffers);
-   gxio_mpipe_buffer_size_enum_t small_size = GXIO_MPIPE_BUFFER_SIZE_256;
+   size_t stack_bytes = gxio_mpipe_calc_buffer_stack_bytes(nbuffers);
+   bufsize = GXIO_MPIPE_BUFFER_SIZE_256;
    ALIGN(mem, 0x10000);
-   if (gxio_mpipe_init_buffer_stack(mpipec, stack_idx + 0, small_size,
+   if (gxio_mpipe_init_buffer_stack(mpipec, stack_idx + 0, bufsize,
                                     mem, stack_bytes, 0) < 0) {
       tmc_task_die("Failed to init buffer stack.");
    }
    mem += stack_bytes;
-   gxio_mpipe_buffer_size_enum_t large_size = GXIO_MPIPE_BUFFER_SIZE_1664;
+   bufsize = GXIO_MPIPE_BUFFER_SIZE_1664;
    ALIGN(mem, 0x10000);
-   if (gxio_mpipe_init_buffer_stack(mpipec, stack_idx + 1, large_size,
+   if (gxio_mpipe_init_buffer_stack(mpipec, stack_idx + 1, bufsize,
                                     mem, stack_bytes, 0) < 0) {
       tmc_task_die("Failed to init buffer stack.");
    }
    mem += stack_bytes;
-
    /*Register the entire huge page of memory which contains all the buffers.*/
-   if (gxio_mpipe_register_page(mpipec, stack_idx+0, page, page_size, 0) < 0) {
+   if (gxio_mpipe_register_page(mpipec, stack_idx + 0, page, page_size, 0) < 0) {
       tmc_task_die("Failed to register page.");
    }
-   if (gxio_mpipe_register_page(mpipec, stack_idx+1, page, page_size, 0) < 0) {
+   if (gxio_mpipe_register_page(mpipec, stack_idx + 1, page, page_size, 0) < 0) {
       tmc_task_die("Failed to register page.");
    }
    /*Push some buffers onto the stacks.*/
    ALIGN(mem, 0x10000);
-   for (i = 0; i < num_buffers; i++) {
+   for (i = 0; i < nbuffers; i++) {
       gxio_mpipe_push_buffer(mpipec, stack_idx + 0, mem);
       mem += 256;
    }
    ALIGN(mem, 0x10000);
-   for (i = 0; i < num_buffers; i++) {
+   for (i = 0; i < nbuffers; i++) {
       gxio_mpipe_push_buffer(mpipec, stack_idx + 1, mem);
       mem += 1664;
    }

@@ -1,17 +1,6 @@
-// Copyright 2013 Tilera Corporation. All Rights Reserved.
-//
-//   The source code contained or described herein and all documents
-//   related to the source code ("Material") are owned by Tilera
-//   Corporation or its suppliers or licensors.  Title to the Material
-//   remains with Tilera Corporation or its suppliers and licensors. The
-//   software is licensed under the Tilera MDE License.
-//
-//   Unless otherwise agreed by Tilera in writing, you may not remove or
-//   alter this notice or any other notice embedded in Materials by Tilera
-//   or Tilera's suppliers or licensors in any way.
-//
-//
-
+/******************************************************************************/
+/* File:   callcap/net.c                                                      */
+/******************************************************************************/
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +23,8 @@
 #include <tmc/spin.h>
 #include <tmc/sync.h>
 #include <tmc/task.h>
+
+#include "local.h"
 
 
 // Align "p" mod "align", assuming "p" is a "void*".
@@ -94,16 +85,7 @@ struct {
   volatile unsigned long v __attribute__ ((aligned(CHIP_L2_LINE_SIZE())));
 } total64 = { 0 };
 
-// Help check for errors.
-#define VERIFY(VAL, WHAT)                                       \
-  do {                                                          \
-    long long __val = (VAL);                                    \
-    if (__val < 0)                                              \
-      tmc_task_die("Failure in '%s': %lld: %s.",                \
-                   (WHAT), __val, gxio_strerror(__val));        \
-  } while (0)
-
-
+#if 0
 // Allocate memory for a buffer stack and its buffers, initialize the
 // stack, and push buffers onto it.
 //
@@ -155,45 +137,37 @@ create_stack(gxio_mpipe_context_t* context, int stack_idx,
     mem += size;
   }
 }
+#endif
 
 
-// The main function for each worker thread.
-//
-static void*
-main_aux(void* arg)
+/******************************************************************************/
+/* Thread:   net_thread                                                       */
+/******************************************************************************/
+void* net_thread(void* arg)
 {
-  int result;
+  int c, i; /*Return code, Index*/
+  int ifx = (long)arg; /*Interface index*/
+  gxio_mpipe_iqueue_t* iqueue = iqueues[ifx]; /*Ingress queue*/
 
-  int rank = (long)arg;
+  /*Bind to a single cpu.*/
+   if (tmc_cpus_set_my_cpu(tmc_cpus_find_nth_cpu(&cpus, ifx)) < 0) {
+      tmc_task_die("Failed to setup CPU affinity\n");
+   }
+   mlockall(MCL_CURRENT);
+   tmc_sync_barrier_wait(&syncbar);
+   tmc_spin_barrier_wait(&spinbar);
 
+   if (set_dataplane(DP_DEBUG) < 0) {
+      tmc_task_die("Failed to setup dataplane\n");
+   }
+   tmc_spin_barrier_wait(&spinbar);
 
-  // Bind to a single cpu.
-  result = tmc_cpus_set_my_cpu(tmc_cpus_find_nth_cpu(&cpus, rank));
-  VERIFY(result, "tmc_cpus_set_my_cpu()");
-
-  mlockall(MCL_CURRENT);
-  tmc_sync_barrier_wait(&sync_barrier);
-  tmc_spin_barrier_wait(&spin_barrier);
-
-  result = set_dataplane(DP_DEBUG);
-  VERIFY(result, "set_dataplane()");
-
-  tmc_spin_barrier_wait(&spin_barrier);
-
-  if (rank == 0)
-  {
-    // HACK: Pause briefly, to let everyone finish passing the barrier.
-    for (int i = 0; i < 10000; i++)
-      __insn_mfspr(SPR_PASS);
-
-    // Allow packets to flow.
-    sim_enable_mpipe_links(instance, -1);
-  }
-
-
-  // Forward packets.
-
-  gxio_mpipe_iqueue_t* iqueue = iqueues[rank];
+   if (ifx == 0) {
+      /*Pause briefly, to let everyone finish passing the barrier.*/
+      for (i = 0; i < 10000; i++) __insn_mfspr(SPR_PASS);
+      /*Allow packets to flow.*/
+      sim_enable_mpipe_links(mpipei, -1);
+   }
 
   // Local version of "total". The optimization is to save a global variable
   // load (most likely in L3) per iteration and share invalidation.
@@ -290,201 +264,7 @@ main_aux(void* arg)
 
  L_done:
 
-  return (void*)NULL;
+  return (void *)NULL;
 }
 
 
-int
-main(int argc, char** argv)
-{
-  int result;
-
-  char* link_name = "gbe0";
-
-  // Parse args.
-  for (int i = 1; i < argc; i++)
-  {
-    char* arg = argv[i];
-
-    // --link <link_name>, link_name is for both ingress and egress.
-    if (!strcmp(arg, "--link") && i + 1 < argc)
-    {
-      link_name = argv[++i];
-    }
-    else if (!strcmp(arg, "-n") && i + 1 < argc)
-    {
-      num_packets = atoi(argv[++i]);
-    }
-    else if (!strcmp(arg, "-w") && i + 1 < argc)
-    {
-      num_workers = atoi(argv[++i]);
-    }
-    else if (!strcmp(arg, "--flip"))
-    {
-      flip = true;
-    }
-    else if (!strcmp(arg, "--jumbo"))
-    {
-      jumbo = true;
-    }
-    else
-    {
-      tmc_task_die("Unknown option '%s'.", arg);
-    }
-  }
-
-
-  // Determine the available cpus.
-  result = tmc_cpus_get_my_affinity(&cpus);
-  VERIFY(result, "tmc_cpus_get_my_affinity()");
-
-  if (tmc_cpus_count(&cpus) < num_workers)
-    tmc_task_die("Insufficient cpus.");
-
-
-  // Get the instance.
-  instance = gxio_mpipe_link_instance(link_name);
-  if (instance < 0)
-    tmc_task_die("Link '%s' does not exist.", link_name);
-
-  // Start the driver.
-  result = gxio_mpipe_init(context, instance);
-  VERIFY(result, "gxio_mpipe_init()");
-
-  gxio_mpipe_link_t link;
-  result = gxio_mpipe_link_open(&link, context, link_name, 0);
-  VERIFY(result, "gxio_mpipe_link_open()");
-
-  int channel = gxio_mpipe_link_channel(&link);
-
-  if (jumbo)
-  {
-    // Allow the link to receive jumbo packets.
-    gxio_mpipe_link_set_attr(&link, GXIO_MPIPE_LINK_RECEIVE_JUMBO, 1);
-  }
-
-
-  // Allocate some iqueues.
-  iqueues = calloc(num_workers, sizeof(*iqueues));
-  if (iqueues == NULL)
-    tmc_task_die("Failure in 'calloc()'.");
-
-  // Allocate some NotifRings.
-  result = gxio_mpipe_alloc_notif_rings(context, num_workers, 0, 0);
-  VERIFY(result, "gxio_mpipe_alloc_notif_rings()");
-  unsigned int ring = result;
-
-  // Init the NotifRings.
-  size_t notif_ring_entries = 512;
-  size_t notif_ring_size = notif_ring_entries * sizeof(gxio_mpipe_idesc_t);
-  size_t needed = notif_ring_size + sizeof(gxio_mpipe_iqueue_t);
-  for (int i = 0; i < num_workers; i++)
-  {
-    tmc_alloc_t alloc = TMC_ALLOC_INIT;
-    tmc_alloc_set_home(&alloc, tmc_cpus_find_nth_cpu(&cpus, i));
-    // The ring must use physically contiguous memory, but the iqueue
-    // can span pages, so we use "notif_ring_size", not "needed".
-    tmc_alloc_set_pagesize(&alloc, notif_ring_size);
-    void* iqueue_mem = tmc_alloc_map(&alloc, needed);
-    if (iqueue_mem == NULL)
-      tmc_task_die("Failure in 'tmc_alloc_map()'.");
-    gxio_mpipe_iqueue_t* iqueue = iqueue_mem + notif_ring_size;
-    result = gxio_mpipe_iqueue_init(iqueue, context, ring + i,
-                                    iqueue_mem, notif_ring_size, 0);
-    VERIFY(result, "gxio_mpipe_iqueue_init()");
-    iqueues[i] = iqueue;
-  }
-
-
-  // Allocate a NotifGroup.
-  result = gxio_mpipe_alloc_notif_groups(context, 1, 0, 0);
-  VERIFY(result, "gxio_mpipe_alloc_notif_groups()");
-  int group = result;
-
-  // Allocate some buckets. The default mPipe classifier requires
-  // the number of buckets to be a power of two (maximum of 4096).
-  int num_buckets = 1024;
-  result = gxio_mpipe_alloc_buckets(context, num_buckets, 0, 0);
-  VERIFY(result, "gxio_mpipe_alloc_buckets()");
-  int bucket = result;
-
-  // Init group and buckets, preserving packet order among flows.
-  gxio_mpipe_bucket_mode_t mode = GXIO_MPIPE_BUCKET_DYNAMIC_FLOW_AFFINITY;
-  result = gxio_mpipe_init_notif_group_and_buckets(context, group,
-                                                   ring, num_workers,
-                                                   bucket, num_buckets, mode);
-  VERIFY(result, "gxio_mpipe_init_notif_group_and_buckets()");
-
-
-  // Initialize the equeue.
-  result = gxio_mpipe_alloc_edma_rings(context, 1, 0, 0);
-  VERIFY(result, "gxio_mpipe_alloc_edma_rings");
-  uint ering = result;
-  size_t edescs_size = equeue_entries * sizeof(gxio_mpipe_edesc_t);
-  tmc_alloc_t edescs_alloc = TMC_ALLOC_INIT;
-  tmc_alloc_set_pagesize(&edescs_alloc, edescs_size);
-  void* edescs = tmc_alloc_map(&edescs_alloc, edescs_size);
-  if (edescs == NULL)
-    tmc_task_die("Failed to allocate equeue memory.");
-  result = gxio_mpipe_equeue_init(equeue, context, ering, channel,
-                                  edescs, edescs_size, 0);
-  VERIFY(result, "gxio_gxio_equeue_init()");
-
-
-  // Use enough small/large buffers to avoid ever getting "idesc->be".
-  unsigned int num_bufs = equeue_entries + num_workers * notif_ring_entries;
-
-  // Allocate small/large/jumbo buffer stacks.
-  result = gxio_mpipe_alloc_buffer_stacks(context, jumbo ? 3 : 2, 0, 0);
-  VERIFY(result, "gxio_mpipe_alloc_buffer_stacks()");
-  int stack_idx = result;
-
-  // Initialize small/large stacks.
-  create_stack(context, stack_idx + 0, GXIO_MPIPE_BUFFER_SIZE_128, num_bufs);
-  create_stack(context, stack_idx + 1, GXIO_MPIPE_BUFFER_SIZE_1664, num_bufs);
-
-  if (jumbo)
-  {
-    // Initialize jumbo stack.  We use 16K buffers, because 4K buffers
-    // are too small, and 10K buffers can induce "false chaining".  We
-    // use only 4 buffers per worker, because they use a lot of memory,
-    // and the risk of "idesc->be" is low.
-    create_stack(context, stack_idx + 2, GXIO_MPIPE_BUFFER_SIZE_16384,
-                 num_workers * 4);
-
-    // Make sure all "possible" jumbo packets can be egressed safely.
-    result = gxio_mpipe_equeue_set_snf_size(equeue, 10384);
-    VERIFY(result, "gxio_mpipe_equeue_set_snf_size()");
-  }
-
-
-  // Register for packets.
-  gxio_mpipe_rules_t rules;
-  gxio_mpipe_rules_init(&rules, context);
-  gxio_mpipe_rules_begin(&rules, bucket, num_buckets, NULL);
-  result = gxio_mpipe_rules_commit(&rules);
-  VERIFY(result, "gxio_mpipe_rules_commit()");
-
-
-  tmc_sync_barrier_init(&sync_barrier, num_workers);
-  tmc_spin_barrier_init(&spin_barrier, num_workers);
-
-  pthread_t threads[num_workers];
-  for (int i = 1; i < num_workers; i++)
-  {
-    if (pthread_create(&threads[i], NULL, main_aux, (void*)(intptr_t)i) != 0)
-      tmc_task_die("Failure in 'pthread_create()'.");
-  }
-  (void)main_aux((void*)(intptr_t)0);
-  for (int i = 1; i < num_workers; i++)
-  {
-    if (pthread_join(threads[i], NULL) != 0)
-      tmc_task_die("Failure in 'pthread_join()'.");
-  }
-
-  // FIXME: Wait until pending egress is "done".
-  for (int i = 0; i < 1000000; i++)
-    __insn_mfspr(SPR_PASS);
-
-  return 0;
-}
