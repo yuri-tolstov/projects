@@ -6,7 +6,8 @@
 /*----------------------------------------------------------------------------*/
 
 /*Constants.*/
-#define NUMLINKS  4  /*Number of network interfaces*/
+#define NUMLINKS   4  /*Number of network interfaces*/
+#define DTILEBASE  4  /*Dataplane TILE base*/
 
 /*Data.*/
 extern int mpipei; /*mPIPE instance*/

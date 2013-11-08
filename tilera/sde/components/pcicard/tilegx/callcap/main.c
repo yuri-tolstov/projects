@@ -38,6 +38,7 @@
 #define ALIGN(p, align) do { (p) += -(long)(p) & ((align) - 1); } while(0)
 
 /*Globally visible data.*/
+cpu_set_t cpus; /*Initial CPU affinity*/
 int mpipei; /*mPIPE instance*/
 tmc_sync_barrier_t syncbar;
 tmc_spin_barrier_t spinbar;
@@ -60,7 +61,6 @@ int main(int argc, char** argv)
 /******************************************************************************/
 {
    int i, c, n; /*Index, Return code, Number*/
-   cpu_set_t cpus; /*Initial CPU affinity*/
    pthread_t tid[NUMTHREADS]; /*Processes ID*/
 
    /*-------------------------------------------------------------------------*/
@@ -121,7 +121,7 @@ int main(int argc, char** argv)
    for (i = 0; i < NUMLINKS; i++) {
       void* iqueue_mem;
       tmc_alloc_t alloc = TMC_ALLOC_INIT;
-      tmc_alloc_set_home(&alloc, tmc_cpus_find_nth_cpu(&cpus, i));
+      tmc_alloc_set_home(&alloc, tmc_cpus_find_nth_cpu(&cpus, DTILEBASE + i)); //TODO:
       /*The ring must use physically contiguous memory, but the iqueue
        *can span pages, so we use "iring_size", not "needed".*/
       tmc_alloc_set_pagesize(&alloc, iring_size);
@@ -267,7 +267,7 @@ int main(int argc, char** argv)
    } 
    /*Net threads.*/
    for (i = 0, n++; i < NUMLINKS; i++, n++) {
-      if (pthread_create(&tid[n], NULL, net_thread, (void *)(intptr_t)i) != 0) {
+      if (pthread_create(&tid[n], NULL, net_thread, (void *)(intptr_t)(DTILEBASE + i)) != 0) {
          tmc_task_die("Failed to create NET thread %d\n", i);
       } 
    }

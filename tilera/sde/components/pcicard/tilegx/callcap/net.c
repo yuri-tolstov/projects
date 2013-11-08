@@ -32,17 +32,14 @@
 /*Global data.*/
 extern gxio_mpipe_iqueue_t *iqueues[NUMLINKS]; /*mPIPE ingress queues*/
 extern gxio_mpipe_equeue_t *equeues; /*mPIPE egress queues*/
-
-/*The initial affinity.*/
-static cpu_set_t cpus;
-
+extern cpu_set_t cpus; /*The initial affinity.*/
 
 /******************************************************************************/
 /* Thread:   net_thread                                                       */
 /******************************************************************************/
 void* net_thread(void* arg)
 {
-   int ifx = (long)arg; /*Interface index*/
+   int ifx = (uintptr_t)arg; /*Interface index*/
    int i, n; /*Index, Number*/
    gxio_mpipe_iqueue_t *iqueue = iqueues[ifx]; /*Ingress queue*/
    gxio_mpipe_equeue_t *equeue = &equeues[ifx]; /*Egress queue*/
