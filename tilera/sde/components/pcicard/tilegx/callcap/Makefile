@@ -23,7 +23,7 @@ all: callcap
 clean:
 	rm -f *.o callcap
 
-callcap: main.o ctrl.o
+callcap: main.o ctrl.o net.o
 	$(CC) $(LDFLAGS) $(XFLAGS) -o $@ $^ $(LIBS)
 
 %.o: %.c

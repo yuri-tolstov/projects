@@ -32,25 +32,26 @@
 
 /******************************************************************************/
 #define NAMELEN  32  /*Name length*/
-#define NUMLINKS  4  /*Number of network interfaces*/
 #define NUMNETTHRS  4  /*Number of network threads*/
 #define NUMTHREADS (2/*Control*/ + NUMNETTHRS) /*Total number of threads*/
 
 /*Align p mod align, assuming p is a void*/
 #define ALIGN(p, align) do { (p) += -(long)(p) & ((align) - 1); } while(0)
 
-static tmc_sync_barrier_t syncbar;
-static tmc_spin_barrier_t spinbar;
+/*Globally visible data.*/
+int mpipei; /*mPIPE instance*/
+tmc_sync_barrier_t syncbar;
+tmc_spin_barrier_t spinbar;
+gxio_mpipe_iqueue_t *iqueues[NUMLINKS]; /*mPIPE ingress queues*/
+gxio_mpipe_equeue_t *equeues; /*mPIPE egress queues*/
+
+/*Locally visible data.*/
 static char* lnames[NUMLINKS]; /*Net links*/
 static int channels[NUMLINKS]; /*Channels*/
-static int mpipei; /*mPIPE instance*/
 static gxio_mpipe_context_t mpipecd; /*mPIPE context (shared by all CPUs)*/
-static gxio_mpipe_context_t* const mpipec = &mpipecd;
-static gxio_mpipe_iqueue_t* iqueues[NUMLINKS]; /*mPIPE ingress queues*/
-static gxio_mpipe_equeue_t* equeues; /*mPIPE egress queues*/
+static gxio_mpipe_context_t *mpipec = &mpipecd;
 static unsigned int equeue_entries = 2048; /*The number of entries in the equeue ring.*/
 static gxio_mpipe_rules_dmac_t dmacs[4]; /*The dmacs for each link.*/
-
 
 
 /******************************************************************************/
