@@ -176,17 +176,17 @@ int main(int argc, char** argv)
    /*Allocate some buckets. The default mPIPE classifier requires
     *the number of buckets to be a power of two (maximum of 4096).*/
    int bucket;
-   int nbuckets = NUMLINKS;
+   int nbuckets = NUMLINKS + 1;
    if ((bucket = gxio_mpipe_alloc_buckets(mpipec, nbuckets, 0, 0)) < 0) {
       tmc_task_die("Failed to alloc buckets.");
    }
    /*Map group and buckets, preserving packet order among flows.*/
    for (i = 0; i < NUMLINKS; i++) {
       gxio_mpipe_bucket_mode_t mode = GXIO_MPIPE_BUCKET_DYNAMIC_FLOW_AFFINITY;
-      if (gxio_mpipe_init_notif_group_and_buckets(mpipec, group + i,
+      if ((c = gxio_mpipe_init_notif_group_and_buckets(mpipec, group + i,
                                                   iring + i, NUMLINKS,
-                                                  bucket + i, nbuckets, mode) < 0) {
-         tmc_task_die("Failed to map groups and buckets.");
+                                                  bucket + i, nbuckets, mode)) < 0) {
+         tmc_task_die("Failed to map groups and buckets (%s)", gxio_strerror(c));
       }
    }
    /*-------------------------------------------------------------------------*/
@@ -256,7 +256,6 @@ int main(int argc, char** argv)
    /*-------------------------------------------------------------------------*/
    /* Create and run working threads.                                         */
    /*-------------------------------------------------------------------------*/
-printf("Creating threads...\n");
    /*Control threads.*/
    n = 0;
    if (pthread_create(&tid[n], NULL, h2t_thread, NULL) != 0) {
