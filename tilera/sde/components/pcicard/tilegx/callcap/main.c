@@ -53,7 +53,7 @@ static int channels[NUMLINKS]; /*Channels*/
 static gxio_mpipe_context_t mpipecd; /*mPIPE context (shared by all CPUs)*/
 static gxio_mpipe_context_t *mpipec = &mpipecd;
 static unsigned int equeue_entries = 2048; /*The number of entries in the equeue ring.*/
-static gxio_mpipe_rules_dmac_t dmacs[4]; /*The dmacs for each link.*/
+// static gxio_mpipe_rules_dmac_t dmacs[4]; /*The dmacs for each link.*/
 
 
 /******************************************************************************/
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
    if (gxio_mpipe_init(mpipec, mpipei) < 0) {
       tmc_task_die("Failed to init mPIPE.");
    }
-   /*Open the links.*/
+   /*Open ingress channels.*/
    for (i = 0; i < NUMLINKS; i++) {
       gxio_mpipe_link_t link;
       if (gxio_mpipe_link_open(&link, mpipec, lnames[i], 0) < 0) {
@@ -244,10 +244,12 @@ int main(int argc, char** argv)
       for (int k = 0; k < NUMLINKS; k++) {
          gxio_mpipe_rules_add_channel(&rules, channels[k]);
       }
+#if 0
       /*The non-catchall rules only handle a single dmac.*/
       if (i < NUMLINKS) {
          gxio_mpipe_rules_add_dmac(&rules, dmacs[i]);
       }
+#endif
    }
    if (gxio_mpipe_rules_commit(&rules) < 0) {
       tmc_task_die("Failed to commit rules.");
