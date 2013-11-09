@@ -35,6 +35,10 @@ void* t2h_thread(void *arg)
    char *mbuf; /*Message buffer*/
    int msize = 4096; /*Message size*/
 
+#if 1 //TODO:debug
+printf("T2H thread.\n");
+while (1);
+#endif
    // tmc_sync_barrier_wait(&syncbar);
    /*Open the T2H channel.*/
    if ((fd = open(path, O_RDWR)) < 0) {
@@ -85,6 +89,10 @@ void* h2t_thread(void *arg)
    char *mbuf; /*Message buffer*/
    int msize = 4096; /*Message size*/
 
+#if 1 //TODO:debug
+printf("H2T thread.\n");
+while (1);
+#endif
    // tmc_sync_barrier_wait(&syncbar);
    /*Open the H2T channel.*/
    if ((fd = open(path, O_RDWR)) < 0) {

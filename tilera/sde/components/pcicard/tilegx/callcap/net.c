@@ -43,7 +43,7 @@ void* net_thread(void* arg)
    int ifx = (uintptr_t)arg; /*Interface index*/
    int i, n; /*Index, Number*/
    gxio_mpipe_iqueue_t *iqueue = iqueues[ifx]; /*Ingress queue*/
-   gxio_mpipe_equeue_t *equeue = &equeues[ifx]; /*Egress queue*/
+   gxio_mpipe_equeue_t *equeue = &equeues[(ifx + 1) & (NUMLINKS - 1)]; /*Egress queue*/
    gxio_mpipe_idesc_t *idescs; /*Ingress packet descriptors*/
    gxio_mpipe_edesc_t edescs[MAXBATCH]; /*Egress descriptors.*/
    long slot;
@@ -62,7 +62,7 @@ void* net_thread(void* arg)
    if (ifx == 0) {
       /*Pause briefly, to let everyone finish passing the barrier.*/
       for (i = 0; i < 10000; i++) __insn_mfspr(SPR_PASS);
-      /*Allow packets to flow.*/
+      /*Allow packets to flow (on all links).*/
       sim_enable_mpipe_links(mpipei, -1);
    }
    /*-------------------------------------------------------------------------*/
@@ -76,20 +76,19 @@ void* net_thread(void* arg)
 #if 1
 printf("[%d] Get packet(s), n=%d\n", ifx, n);
 #endif
-
       /*Prefetch packet descriptors from L3 to L1.*/
       tmc_mem_prefetch(idescs, n * sizeof(*idescs));
 
       /*Reserve slots.  NOTE: This might spin.*/
       slot = gxio_mpipe_equeue_reserve_fast(equeue, n);
 
-      /*Prepair for output.*/
+      /*Send packet(s) out.*/
       for (i = 0; i < n; i++) {
          gxio_mpipe_edesc_copy_idesc(&edescs[i], &idescs[i]);
-#if 0
+#if 1
          /*Drop "error" packets (but ignore "checksum" problems).*/
-         if (idesc->be || idesc->me || idesc->tr || idesc->ce) {
-            edesc->ns = 1;
+         if (idescs[i].be || idescs[i].me || idescs[i].tr || idescs[i].ce) {
+            edescs[i].ns = 1;
          }
 #endif
          /*Send the packets out*/
