@@ -10,7 +10,6 @@
 #define DTILEBASE  4  /*Dataplane TILE base*/
 
 /*Data.*/
-extern int mpipei; /*mPIPE instance*/
 extern tmc_sync_barrier_t syncbar;
 extern tmc_spin_barrier_t spinbar;
 

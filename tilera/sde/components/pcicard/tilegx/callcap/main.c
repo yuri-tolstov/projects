@@ -265,13 +265,13 @@ int main(int argc, char** argv)
    if (pthread_create(&tid[n], NULL, t2h_thread, NULL) != 0) {
       tmc_task_die("Failed to create T2H thread\n");
    } 
+   n++;
    /*Net threads.*/
-   for (i = 0, n++; i < NUMLINKS; i++, n++) {
-      if (pthread_create(&tid[n], NULL, net_thread, (void *)(intptr_t)(DTILEBASE + i)) != 0) {
+   for (i = 0; i < NUMLINKS; i++, n++) {
+      if (pthread_create(&tid[n], NULL, net_thread, (void *)((intptr_t)i)) != 0) {
          tmc_task_die("Failed to create NET thread %d\n", i);
       } 
    }
-printf("Done.\n");
    /*Wait for thread completion.*/
    for (i = 0; i < NUMTHREADS; i++) {
       pthread_join(tid[i], NULL);

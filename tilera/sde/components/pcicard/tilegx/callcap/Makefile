@@ -14,8 +14,9 @@ endif
 
 OPT = -Os
 CFLAGS = -std=gnu99 -Wall -Werror -g $(OPT) -pthread
-LDFLAGS = $(if $(filter -m32, $(XFLAGS)), -static) -pthread
+LDFLAGS = -g $(if $(filter -m32, $(XFLAGS)), -static) -pthread
 LIBS = -lgxio -ltmc
+LIBMAP = -Wl,-Map=callcap.map
 
 .PHONY: all clean
 all: callcap
@@ -24,7 +25,7 @@ clean:
 	rm -f *.o callcap
 
 callcap: main.o ctrl.o net.o
-	$(CC) $(LDFLAGS) $(XFLAGS) -o $@ $^ $(LIBS)
+	$(CC) $(LIBMAP) $(LDFLAGS) $(XFLAGS) -o $@ $^ $(LIBS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(XFLAGS) -c -o $@ $<

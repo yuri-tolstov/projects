@@ -30,6 +30,7 @@
 #define MAXBATCH 16  /*Maximum number of packets in a batch*/
 
 /*Global data.*/
+extern int mpipei; /*mPIPE instance*/
 extern gxio_mpipe_iqueue_t *iqueues[NUMLINKS]; /*mPIPE ingress queues*/
 extern gxio_mpipe_equeue_t *equeues; /*mPIPE egress queues*/
 extern cpu_set_t cpus; /*The initial affinity.*/
@@ -48,16 +49,14 @@ void* net_thread(void* arg)
    long slot;
   
    /*Bind to a single cpu.*/
-   if (tmc_cpus_set_my_cpu(tmc_cpus_find_nth_cpu(&cpus, ifx)) < 0) {
+   if (tmc_cpus_set_my_cpu(tmc_cpus_find_nth_cpu(&cpus, DTILEBASE + ifx)) < 0) {
       tmc_task_die("Failed to setup CPU affinity\n");
    }
-   mlockall(MCL_CURRENT);
-   tmc_sync_barrier_wait(&syncbar);
-   tmc_spin_barrier_wait(&spinbar);
-
    if (set_dataplane(DP_DEBUG) < 0) {
       tmc_task_die("Failed to setup dataplane\n");
    }
+   /*Line up all network threads.*/
+   tmc_sync_barrier_wait(&syncbar);
    tmc_spin_barrier_wait(&spinbar);
 
    if (ifx == 0) {
@@ -71,9 +70,12 @@ void* net_thread(void* arg)
    /*-------------------------------------------------------------------------*/
    while (1) {
       /*Receive packet(s).*/
-      n = gxio_mpipe_iqueue_try_peek(iqueue, &idescs);
+      n = gxio_mpipe_iqueue_peek(iqueue, &idescs);
       if (n <= 0) continue;
       else if (n > 16) n = 16; //TODO: Experiment with this number.
+#if 1
+printf("[%d] Get packet(s), n=%d\n", ifx, n);
+#endif
 
       /*Prefetch packet descriptors from L3 to L1.*/
       tmc_mem_prefetch(idescs, n * sizeof(*idescs));
@@ -83,8 +85,6 @@ void* net_thread(void* arg)
 
       /*Prepair for output.*/
       for (i = 0; i < n; i++) {
-         // idesc = &idescs[i];
-         // edesc = &edescs[i];
          gxio_mpipe_edesc_copy_idesc(&edescs[i], &idescs[i]);
 #if 0
          /*Drop "error" packets (but ignore "checksum" problems).*/
