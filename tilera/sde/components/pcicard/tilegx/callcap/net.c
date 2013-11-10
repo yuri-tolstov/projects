@@ -43,7 +43,8 @@ void* net_thread(void* arg)
    int ifx = (uintptr_t)arg; /*Interface index*/
    int i, n; /*Index, Number*/
    gxio_mpipe_iqueue_t *iqueue = iqueues[ifx]; /*Ingress queue*/
-   gxio_mpipe_equeue_t *equeue = &equeues[(ifx + 1) & (NUMLINKS - 1)]; /*Egress queue*/
+   // gxio_mpipe_equeue_t *equeue = &equeues[(ifx + 1) & (NUMLINKS - 1)]; /*Egress queue*/
+   gxio_mpipe_equeue_t *equeue = &equeues[ifx]; /*Egress queue*/
    gxio_mpipe_idesc_t *idescs; /*Ingress packet descriptors*/
    gxio_mpipe_edesc_t edescs[MAXBATCH]; /*Egress descriptors.*/
    long slot;
@@ -52,7 +53,7 @@ void* net_thread(void* arg)
    if (tmc_cpus_set_my_cpu(tmc_cpus_find_nth_cpu(&cpus, DTILEBASE + ifx)) < 0) {
       tmc_task_die("Failed to setup CPU affinity\n");
    }
-   if (set_dataplane(DP_DEBUG) < 0) {
+   if (set_dataplane(0) < 0) {
       tmc_task_die("Failed to setup dataplane\n");
    }
    /*Line up all network threads.*/
