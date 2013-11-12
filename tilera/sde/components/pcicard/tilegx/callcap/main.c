@@ -183,11 +183,8 @@ int main(int argc, char** argv)
    /*Map groups and buckets, preserving packet order among flows.*/
    for (i = 0; i < NUMLINKS; i++) {
       gxio_mpipe_bucket_mode_t mode = GXIO_MPIPE_BUCKET_DYNAMIC_FLOW_AFFINITY;
-      if ((c = gxio_mpipe_init_notif_group_and_buckets(mpipec, group + i,
-                                                  iring + i, 1,
-                                                  // iring + i, NUMLINKS,
+      if ((c = gxio_mpipe_init_notif_group_and_buckets(mpipec, group + i, iring + i, 1,
                                                   bucket + i, 1, mode)) < 0) {
-                                                  // bucket + i, nbuckets, mode)) < 0) {
          tmc_task_die("Failed to map groups and buckets (%s)", gxio_strerror(c));
       }
    }
