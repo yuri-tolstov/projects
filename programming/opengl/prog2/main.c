@@ -1,26 +1,40 @@
 #include <GL/glut.h>
 
-void displayMe(void)
+void display(void)
 {
-    glClear(GL_COLOR_BUFFER_BIT);
-    glBegin(GL_POLYGON);
-        glVertex3f(0.0, 0.0, 0.0);
-        glVertex3f(0.5, 0.0, 0.0);
-        glVertex3f(0.5, 0.5, 0.0);
-        glVertex3f(0.0, 0.5, 0.0);
-    glEnd();
-    glFlush();
+  glClearColor(0,0,0,0);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  glBegin(GL_TRIANGLES);
+  {
+    glColor3f(1,0,0);
+    glVertex2f(0,0);
+
+    glColor3f(0,1,0);
+    glVertex2f(.5,0);
+
+    glColor3f(0,0,1);
+    glVertex2f(.5,.5);
+  }
+  glEnd();
+  glutSwapBuffers();
 }
 
-int main(int argc, char** argv)
+void reshape(int w, int h)
 {
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_SINGLE);
-    glutInitWindowSize(300, 300);
-    glutInitWindowPosition(100, 100);
-    glutCreateWindow("Hello world :D");
-    glutDisplayFunc(displayMe);
-    glutMainLoop();
-    return 0;
+}
+
+int main(int argc, char **argv) {
+  glutInit(&argc, argv);
+  
+  glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);  
+  glutInitWindowPosition(200,200);
+  glutInitWindowSize(512,512);
+  glutCreateWindow("Part 1");
+  glutDisplayFunc(display);
+  glutReshapeFunc(reshape);
+  
+  glutMainLoop();
+  return 0;
 }
 
