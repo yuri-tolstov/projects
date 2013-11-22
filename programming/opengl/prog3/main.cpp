@@ -17,10 +17,10 @@ int numberOfQuotes=0,i;
 void timeTick(void)
 {
     if (UpwardsScrollVelocity< -600)
-        view-=0.000011;
+        view-=0.00011;
     if(view < 0) {view=20; UpwardsScrollVelocity = -10.0;}
     //  exit(0);
-    UpwardsScrollVelocity -= 0.015;
+    UpwardsScrollVelocity -= 0.15;
   glutPostRedisplay();
 }
 
