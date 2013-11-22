@@ -1,0 +1,5 @@
+1. Install GLUT library
+On CentOS:
+# yum install freeglut freeglut-devel
+
+
