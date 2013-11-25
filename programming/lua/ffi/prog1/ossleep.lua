@@ -4,6 +4,7 @@ void sleep(int ms);
 int poll(struct pollfd *fds, unsigned long nfds, int tmout);
 ]]
 
+local sleep
 function sleep(s)
    ffi.C.poll(nil, 0, s * 1000)
 end
