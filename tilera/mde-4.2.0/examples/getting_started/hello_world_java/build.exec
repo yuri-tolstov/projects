@@ -1,0 +1,23 @@
+#!/bin/sh
+
+BACKGROUND=0
+if [ "$1" == "-background" ] ; then
+  BACKGROUND=1
+  shift
+fi 
+
+COMMAND=$1
+shift
+ARGS="$*"
+
+PWD=`pwd`
+echo "build.exec: pwd = ${PWD}"
+
+echo ${COMMAND} ${ARGS}
+if [ ${BACKGROUND} -eq 1 ] ; then
+  ${COMMAND} ${ARGS} &
+else
+  ${COMMAND} ${ARGS}
+fi
+
+echo "build.exec: Done."

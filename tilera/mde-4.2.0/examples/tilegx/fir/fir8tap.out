@@ -1,0 +1,3 @@
+The Fir filter is bit exact to the reference c-code 
+Total cycles is 6727 cycles for N=2048 point 8 tap filter 
+The average cycles for an 8-tap output  is 3 cycles

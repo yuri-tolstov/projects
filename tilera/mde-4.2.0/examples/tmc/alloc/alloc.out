@@ -1,0 +1,9 @@
+Simple alloc: 0xb7f70000
+Megabyte alloc: 0xb7e70000
+Placement alloc: 0x40000000
+huge page alloc: 0xb6000000
+huge page alloc, method two: 0xb5000000
+home 3, controller 0 alloc: 0xb3ff0000
+no level-one caching alloc: 0xb3fe0000
+task alloc: 0xb3fd0000
+malloc from tmc_alloc_t heap: 0xb3fc0280

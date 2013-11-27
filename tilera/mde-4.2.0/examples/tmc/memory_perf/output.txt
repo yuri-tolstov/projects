@@ -1,0 +1,10 @@
+numa_example():
+  Node 0 (unloaded) latency = 86
+  Node 1 (loaded) latency = 233
+home_cache_example():
+  Local uncontended load latency = 2
+  Remote uncontended load latency = 37
+  Remote contended load latency = 39
+huge_page_example():
+  normal page latency (cache + TLB miss) = 156
+  huge page latency (cache miss only) = 109

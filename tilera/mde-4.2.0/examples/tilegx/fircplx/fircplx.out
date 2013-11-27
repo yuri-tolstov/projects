@@ -1,0 +1,3 @@
+The fircplx is bit exact to the reference c-code 
+The cycles for an  N=4096 64-tap fircplx is 614520 cycles
+The average cycles for an 64-tap output  is 150 cycles

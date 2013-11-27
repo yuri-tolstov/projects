@@ -1,0 +1,5 @@
+This test will run 1024000 times.
+One-to-one cycles per transfer: 37.00
+One-to-one cycles per transfer (reverse): 37.00
+Multiple one-to-one cycles per transfer: 37.00
+Multiple one-to-one cycles per transfer (reverse): 37.00

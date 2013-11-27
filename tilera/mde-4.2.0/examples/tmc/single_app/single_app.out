@@ -1,0 +1,13 @@
+Parent (pid=nnn): go_parallel(), forking children...
+Process(pid=nnn), index=0: finished.
+Process(pid=nnn), index=0: sending value 42 to cpu 3...
+Process(pid=nnn), index=0: sent value 42 to cpu 3.
+Process(pid=nnn), index=0: started.
+Process(pid=nnn), index=1: finished.
+Process(pid=nnn), index=1: started.
+Process(pid=nnn), index=2: finished.
+Process(pid=nnn), index=2: started.
+Process(pid=nnn), index=3: finished.
+Process(pid=nnn), index=3: received value 42...
+Process(pid=nnn), index=3: receiving value...
+Process(pid=nnn), index=3: started.

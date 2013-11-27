@@ -1,0 +1,6 @@
+Main process: Hello world!
+Started 4 pthreads
+Thread on tile 0: Hello, Brave New World!
+Thread on tile 1: Hello, Brave New World!
+Thread on tile 2: Hello, Brave New World!
+Thread on tile 3: Hello, Brave New World!

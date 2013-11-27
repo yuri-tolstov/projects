@@ -1,0 +1,107 @@
+This is a short note that describes the procedure to get the SR-IOV 
+running on a TILEncore-Gx36 PCIe card, which must be equipped with
+SR-IOV capable prebooter available in MDE 4.2.
+
+1. Enable the Intel VT-d extensions in BIOS
+   The Intel VT-d extensions provides hardware support for directly 
+   assigning a physical devices to guest. The extensions must be enabled
+   in the BIOS. Some system manufacturers disable these extensions by default.
+   The BIOS settings for Intel VT are usually in the Chipset or Processor 
+   menus. It may also be found in Security Settings menu. Once in the menu,
+   select Enable Intel Virtualization Technology (also known as Intel VT).
+
+   When the machine has rebooted, run "grep vmx /proc/cpuinfo". If the 
+   command outputs, the virtualization extensions are now enabled. 
+   If there is no output your system may not have the virtualization 
+   extensions or the correct BIOS setting enabled.
+
+2. Activate Intel VT-d in the kernel
+   Activate Intel VT-d in the kernel by appending the intel_iommu=on 
+   parameter to the kernel line of the kernel line in the 
+   /boot/grub/grub.conf file.
+
+3. KVM support is enabled by default in CentOS 6.
+
+4. Install the Gx PCIe host driver, i.e. the Physical Function driver, which
+   has the same name tilegxpci.ko as the host driver without the SR-IOV support
+   and is installed using the same procedure.
+
+   At this point, the host should show the PF and the 16 VFs:
+
+bash-4.1$ lspci -d 1a41:*
+06:00.0 Unassigned class [ff00]: Tilera Corp. TILE-Gx36 processor (rev 01)
+06:00.1 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:00.2 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:00.3 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:00.4 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:00.5 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:00.6 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:00.7 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:01.0 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:01.1 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:01.2 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:01.3 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:01.4 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:01.5 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:01.6 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:01.7 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+06:02.0 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+
+   Here, the device at PCI device address 06:00.1 is VF 0, device at 
+   PCI device address 06:02.0 is VF 15.
+
+5. As root, run command "virt-manager" to perform the following tasks:
+   1). Create a CentOS 6.4 virtual machine image.
+       See Section 6.3. Creating guests with virt-manager, 
+       Red Hat Enterprise Linux 6 Virtualization Guide
+   2). Install the CentOS 6.4 virtual machine image.
+   3). Set up the VM networking.
+       See Section 17.6. Managing a virtual network,
+       Red Hat Enterprise Linux 6 Virtualization Administration Guide
+   4). Assign an Gx PCIe VF to the newly installed VM.
+       See Section 12.2. Assigning a PCI device with virt-manager,
+       Red Hat Enterprise Linux 6 Virtualization Host Configuration
+       and Guest Installation Guide
+
+   At this point, the VM should show the newly added VF:
+
+[root@localhost h2t]# lspci -d 1a41:0201
+00:08.0 Unassigned class [ff00]: Tilera Corp. Device 0201 (rev 01)
+
+6. Install the Gx PCIe virtual function driver:
+   1). Create the VF driver directory on the VM:
+       mkdir /lib/modules/`uname -r`/kernel/driver/tile
+   2). Upload the VF driver tilegxpci_vf.ko to the VM,
+       scp tilegxpci_vf.ko \
+       root@<VM_IP>:/lib/modules/2.6.32-358.14.1.el6.x86_64/kernel/drivers/tile
+   3). Since the Gx PCIe VF driver has a dependency on the UIO module,
+       load the UIO driver module on the VM:
+       insmod /lib/modules/`uname -r`/kernel/driver/uio/uio.ko
+   4). Load the VF driver tilegxpci_vf.ko on the VM:
+       insmod /lib/modules/`uname -r`/kernel/driver/tile/tilegxpci_vf.ko
+
+7. Obtain the Gx PCIe VF's major device number on the VM:
+   grep gxpci /proc/devices
+
+8. Create the Packet Queue devices on the VM:
+   mkdir -p /dev/tilegxpci0/packet_queue/h2t
+   mkdir -p /dev/tilegxpci0/packet_queue/t2h
+   mknod /dev/tilegxpci0/packet_queue/h2t/0 c <major_#> 16
+   mknod /dev/tilegxpci0/packet_queue/t2h/0 c <major_#> 32
+
+9. Run the Packet Queue tests with the VM:
+   To run the non-duplex test:
+   1). On the tile side, specify the Gx PCIe Virtual Function number with test
+       command opton "--vf". For example, assuming that VF 0 is attached
+       to the host VM 0, run the following commands to start the PCIe traffic:
+       /tile_t2h --vf=0 & /tile_h2t --vf=0
+   2). On the host VM 0, run the following commands:
+       /tmp/host_t2h & /tmp/host_h2t
+
+   To run the duplex test:
+   1). On the tile side, specify the Gx PCIe Virtual Function number with test
+       command opton "--vf". For example, assuming that VF 15 is attached
+       to the host VM 0, run the following commands to start the PCIe traffic:
+       /tile_dup --vf=15
+   2). On the host VM 0, run the following commands:
+       /tmp/host_t2h & /tmp/host_h2t

@@ -1,0 +1,2 @@
+The autocorrelation is bit exact to the reference c-code 
+The cycles for an M=64 N=2048 autocorretation is 47923 cycles

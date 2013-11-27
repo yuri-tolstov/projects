@@ -1,0 +1,538 @@
+<?xml version="1.0" ?>
+<!-- ===================================================================== -->
+<!-- build.xml - Ant build script                                          -->
+<!-- ===================================================================== -->
+
+<project name="hello_world_java" default="all" basedir=".">
+  <description>hello_world_java Example</description>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- Definitions                                                           -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+  <!-- - - - general environment setup - - - -->
+
+  <!-- current/required ANT version for this script -->
+  <property name="ant.version" value="unknown" />
+  <property name="ant.version.required" value="1.7" />
+  <condition property="ant.version.supported">
+    <and>
+      <!-- this is not ideal, but antversion doesn't exist before 1.7 -->
+      <not><contains string="${ant.version}" substring="unknown"
+            casesensitive="false" /></not>
+      <not><contains string="${ant.version}" substring="version 1.0"
+            casesensitive="false" /></not>
+      <not><contains string="${ant.version}" substring="version 1.1"
+            casesensitive="false" /></not>
+      <not><contains string="${ant.version}" substring="version 1.2"
+            casesensitive="false" /></not>
+      <not><contains string="${ant.version}" substring="version 1.3"
+            casesensitive="false" /></not>
+      <not><contains string="${ant.version}" substring="version 1.4"
+            casesensitive="false" /></not>
+      <not><contains string="${ant.version}" substring="version 1.5"
+            casesensitive="false" /></not>
+      <not><contains string="${ant.version}" substring="version 1.6"
+            casesensitive="false" /></not>
+    </and>
+  </condition>
+  <fail message="Ant version error.${line.separator}Minimum ANT version required is ${ant.version.required}${line.separator}Found: ${ant.version}"
+        unless="ant.version.supported" />
+
+  <!-- provide access to environment variables as env.NAME properties -->
+  <property environment="env" />
+
+  <!-- set jdk.home to "real" JAVA_HOME (since java.home could be the jre subdirectory -->
+  <condition property="jdk.home.default" value="${java.home}/..">
+    <available file="${java.home}/../bin/javac" />
+  </condition>
+  <condition property="jdk.home.default" value="">
+    <available file="/bin/javac" />
+  </condition>
+  <condition property="jdk.home.default" value="/usr">
+    <available file="/usr/bin/javac" />
+  </condition>
+  <property name="jdk.home.default" value="" />
+  <condition property="jdk.home" value="${env.JAVA_HOME}" else="${jdk.home.default}">
+    <isset property="env.JAVA_HOME" />
+  </condition>
+
+  <!-- specify java.util.regex package for regular expressions -->
+  <property name="ant.regexp.regexpimpl"
+            value="org.apache.tools.ant.util.regexp.Jdk14RegexpRegexp" />
+
+  <!-- define boolean properties for "true" values so pre-1.8
+       if/unless conditionals on targets work properly. -->
+  <property name="yes"  value="true" />
+  <property name="true" value="true" />
+  <!-- DON'T define "no"/"false"; we want them to be undefined. -->
+
+
+  <!-- - - - directories, utilities - - - -->
+
+  <!-- build.exec script we use to echo tool command lines -->
+  <property name="build.exec" location="build.exec" />
+
+
+  <!-- - - - configurable build properties - - - -->
+
+  <!-- load configurable project properties from build.properties file -->
+  <property file="build.properties" />
+
+
+  <!-- - - - pathname mappers - - - -->
+
+  <!-- converts .java pathnames to absolute .class pathnames -->
+  <filtermapper id="mapper.java.to.absolute.class">
+    <replaceregex pattern="^(?:${basedir}/${src.dir}/)?(.*)\.java$$"
+                  replace="${basedir}/${bin.dir}/\1.class" />
+  </filtermapper>
+  <!-- converts .java pathnames to relative .class pathnames,
+       that is pathnames under (not including) ${bin.dir} -->
+  <filtermapper id="mapper.java.to.relative.class">
+    <replaceregex pattern="^(?:${basedir}/${src.dir}/)?(.*)\.java$$"
+                  replace="\1.class" />
+  </filtermapper>
+
+  <!-- converts .java pathnames to "package.Class" names -->
+  <filtermapper id="mapper.java.to.class.name">
+    <replaceregex pattern="^(?:${basedir}/${src.dir}/)?(.*)\.java$$"
+                  replace="\1" />
+    <replacestring from="/" to="." />
+  </filtermapper>
+
+  <!-- converts "package/name/Class.class" pathnames to package.name.Class names -->
+  <filtermapper id="mapper.class.to.class.name">
+    <replaceregex pattern="^(?:${basedir}/${bin.dir}/)?(.*).class$$"
+                  replace="\1" />
+    <replacestring from="/" to="." />
+  </filtermapper>
+
+  <!-- converts package.name.Class names to absolute "package/name/Class.h" pathnames -->
+  <!-- HACK: we allow ${bin.dir} as a prefix to permit using filelist with class names -->
+  <filtermapper id="mapper.class.to.absolute.header">
+    <replaceregex pattern="^(?:${basedir}/${bin.dir}/)?(.*)$$"
+                  replace="${basedir}/${bin.dir}/\1_%_h" />
+    <replacestring from="." to="/" />
+    <replacestring from="_%_h" to=".h" />
+  </filtermapper>
+  <!-- converts package.name.Class names to relative "package/name/Class.h" pathnames -->
+  <!-- HACK: we allow ${bin.dir} as a prefix to permit using filelist with class names -->
+  <filtermapper id="mapper.class.to.relative.header">
+    <replaceregex pattern="^(?:${basedir}/${bin.dir}/)?(.*)$$"
+                  replace="\1_%_h" />
+    <replacestring from="." to="/" />
+    <replacestring from="_%_h" to=".h" />
+  </filtermapper>
+
+  <!-- converts .java pathnames to absolute "package/name/Class.h" pathnames -->
+  <filtermapper id="mapper.java.to.absolute.header">
+    <replaceregex pattern="^(?:${basedir}/${src.dir}/)?(.*)\.java$$"
+                  replace="${basedir}/${bin.dir}/\1.h" />
+  </filtermapper>
+  <!-- converts .java pathnames to relative "package/name/Class.h" pathnames -->
+  <filtermapper id="mapper.java.to.relative.header">
+    <replaceregex pattern="^(?:${basedir}/${src.dir}/)?(.*)\.java$$"
+                  replace="\1.h" />
+  </filtermapper>
+
+
+  <!-- - - - project files - - - -->
+
+  <!-- Note: some of these are merely included for completeness,
+       and are used for display (i.e. in the showpaths task).
+
+       In general where an Ant tasks behaves like a fileset, we simply
+       use the "dir" and "files/includes" options with the file lists
+       specified in build.properties.
+
+       We would prefer to define and use the exact same filelists, etc.
+       everywhere, but unfortunately Ant doesn't work that way.
+    -->
+
+  <!-- java sources -->
+  <filelist id="java.sources.files"
+    dir="${src.dir}" files="${java.sources}" />
+
+  <!-- java classes -->
+  <pathconvert property="java.classes.path" pathsep=" ">
+    <filelist refid="java.sources.files" />
+    <mapper refid="mapper.java.to.relative.class"/>
+  </pathconvert>
+  <filelist id="java.classes.files"
+    dir="${bin.dir}" files="${java.classes.path}" />
+
+
+  <!-- - - -  class and library paths - - - -->
+
+  <!-- source path for compiling classes -->
+  <path id="compile.sourcepath">
+    <pathelement location="${src.dir}" />
+  </path>
+  <pathconvert property="compile.sourcepath.string" pathsep=":">
+    <path refid="compile.sourcepath" />
+  </pathconvert>
+
+  <!-- classpath for compiling classes -->
+  <path id="compile.classpath">
+    <pathelement location="${bin.dir}" />
+  </path>
+  <pathconvert property="compile.classpath.string" pathsep=":">
+    <path refid="compile.classpath" />
+  </pathconvert>
+
+  <!-- classpath for execution -->
+  <path id="run.classpath">
+    <pathelement location="${bin.dir}" />
+  </path>
+  <pathconvert property="run.classpath.string" pathsep=":">
+    <path refid="run.classpath" />
+  </pathconvert>
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- Targets                                                               -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+  <!-- - - - top-level - - - -->
+
+  <target name="all" depends="compile"
+    description="Builds everything." />
+
+  <target name="pure" depends="clean,all"
+    description="Does a clean followed by a full build." />
+
+
+  <!-- - - - initialization - - - -->
+
+  <target name="init" depends="ant_version_check,dependencies"
+    description="Internal -- performs any needed initialization.">
+  </target>
+
+  <target name="ant_version_check">
+    <echo message="Ant version is ${ant.version}" />
+    <echo message="Minimum required version is ${ant.version.required}" />
+  </target>
+
+  <target name="dependencies" depends=""
+    description="Internal -- performs build dependency checks." >
+
+    <!-- ensure minimal build directory structure exists -->
+    
+    <echo message="" />
+    <echo message="Checking required build output directories exist..." />
+
+    <exec executable="${build.exec}"
+	  failonerror="true">
+      <arg line="${mkdir} ${bin.dir}" />
+    </exec>
+
+    <!-- check which build elements are modified and need to be rebuilt -->
+
+    <echo message="" />
+    <echo message="Checking build dependencies..." />
+
+    <!-- Note: to use <uptodate> properly with a mapper:
+         - the input to the <mapper> is relative pathnames;
+	   that is, relative to the srcfiles "dir" attribute
+         - the output of the <mapper> is _also_ interpreted
+	   as being relative to the srcfiles "dir" attribute;
+	   this means to map to files in another directory,
+	   the <mapper> output needs to either be absolute
+	   or must use ugly hacks like "../${bin.dir}"
+	   to construct appropriate relative pathnames -->
+
+    <condition property="java.sources.modified" value="no" else="yes">
+      <uptodate>
+	<srcfiles dir="${src.dir}" includes="${java.sources}"/>
+	<mapper refid="mapper.java.to.absolute.class" />
+      </uptodate>
+    </condition>
+
+    <condition property="rebuild.java.classes" value="yes" else="no">
+      <or>
+        <istrue value="${java.sources.modified}" />
+      </or>
+    </condition>
+
+
+    <!-- construct/display flags for build targets -->
+
+    <echo message="" />
+    <echo message="Note: when building in Eclipse, it is normal for" />
+    <echo message="the java sources to be reported as not modified," />
+    <echo message="since Eclipse's default Java builder automatically builds" />
+    <echo message="sources to class files before the Ant builder runs." />
+    <echo message="" />
+    <echo message="Java sources modified?                 ${java.sources.modified}"   />
+    <echo message="Rebuild Java classes?                  ${rebuild.java.classes}"    />
+    <echo message="" />
+    <echo message="Done." />
+
+  </target>
+
+
+  <!-- - - - compilation - - - -->
+
+  <target name="compile"
+          depends="compile.java"
+    description="Compiles everything." />
+
+
+  <!-- - - - compilation, java - - - -->
+
+  <target name="compile.java" depends="init"
+    if="${rebuild.java.classes}"
+    description="Compiles Java sources to classes." >
+
+    <exec executable="${build.exec}"
+	  failonerror="true">
+      <arg line="${mkdir} ${bin.dir}" />
+    </exec>
+
+    <!-- Note: we do know about the <javac> task, 
+         but we prefer <apply> because it allows us to echo the javac
+	 command line, as we do in the other builds below. 
+
+         If you prefer <javac> instead, here's the equivalent:
+
+	 <javac fork="yes" executable="${javac}"
+		destdir="${bin.dir}"
+		srcdir="${src.dir}" includes="${java.sources}"
+		debug="true"
+		includeantruntime="false">
+	   <sourcepath refid="compile.sourcepath" />
+	   <classpath refid="compile.classpath" />
+	 </javac>
+
+     -->
+
+    <apply executable="${build.exec}" parallel="false"
+           dir="${basedir}"
+           dest="${bin.dir}" 
+           failonerror="true">
+      <arg line="${javac}" />
+      <arg line="-g" />
+      <arg line="-d ${bin.dir}" />
+      <arg line="-sourcepath ${compile.sourcepath.string}" />
+      <arg line="-classpath ${compile.classpath.string}" />
+      <srcfile />
+
+      <filelist dir="${src.dir}" files="${java.sources}" />
+      <mapper refid="mapper.java.to.relative.class" />
+
+    </apply>
+
+  </target>
+
+
+  <!-- - - - execution - - - -->
+
+  <target name="run" depends="all"
+    description="Runs application." >
+
+    <!--
+    <java classname="${main.class}"
+          fork="true" dir="${basedir}">
+      <classpath refid="run.classpath" />
+    </java>
+    -->
+
+    <exec executable="${build.exec}"
+          dir="${basedir}"
+          failonerror="true">
+      <arg line="${java}" />
+      <arg line="-classpath ${run.classpath.string}" />
+      <arg line="${main.class}" />
+    </exec>
+
+  </target>
+
+
+  <!-- - - - debugging - - - -->
+
+  <!-- configures JVM to listen at startup for a debugger connection at specified hostname:port -->
+  <property name="jvm.debug.listen.port"
+            value="-agentlib:jdwp=server=y,suspend=y,transport=dt_socket,address" />
+
+  <target name="debug" depends="all"
+    description="Runs application with JVM configured for Java debugging." >
+
+    <!--
+    <java classname="${main.class}"
+          fork="true" dir="${basedir}">
+      <classpath refid="run.classpath" />
+    </java>
+    -->
+
+    <exec executable="${build.exec}"
+          dir="${basedir}"
+          failonerror="true">
+      <arg line="${java}" />
+      <arg line="${jvm.debug.listen.port}=8000" />
+      <arg line="-classpath ${run.classpath.string}" />
+      <arg line="${main.class}" />
+    </exec>
+
+  </target>
+
+
+  <!-- - - - profiling - - - -->
+
+  <target name="profile_init" depends="all"
+    description="Initialize OProfile for Java profiling." >
+
+    <echo message="Initializing OProfile..." />
+
+    <!-- Note: this is only an example of how to configure OProfile.
+         Also, this assumes you've created a user/group named "oprofile" -->
+    <exec executable="/bin/sh"
+          dir="${basedir}"
+          failonerror="true">
+      <arg line="-c 'set -e; opcontrol --init; opcontrol --no-vmlinux; opcontrol --event=ONE:12000000; opcontrol --separate=all; opcontrol --callgraph=20'" />
+    </exec>
+
+    <exec executable="/bin/sh"
+          dir="${basedir}"
+          failonerror="true">
+      <arg line="-c 'opcontrol --status'" />
+    </exec>
+
+  </target>
+
+  <target name="profile_start" depends="all"
+    description="Start OProfile daemon." >
+
+    <echo message="Starting OProfile..." />
+
+    <exec executable="/bin/sh"
+          dir="${basedir}"
+          failonerror="true">
+      <arg line="-c 'set -e; opcontrol --reset; opcontrol --start'" />
+    </exec>
+
+  </target>
+
+  <target name="profile" depends="all"
+    description="Runs application with profiling enabled." >
+
+    <exec executable="${build.exec}"
+          dir="${basedir}"
+          failonerror="true">
+      <arg line="${java}" />
+      <arg line="-XX:-Inline" />
+      <arg line="-classpath ${run.classpath.string}" />
+      <arg line="-agentlib:jvmti_oprofile" />
+      <arg line="${main.class}" />
+    </exec>
+
+  </target>
+
+  <target name="profile_stop" depends="all"
+    description="Stop OProfile daemon." >
+
+    <echo message="Stopping OProfile..." />
+
+    <exec executable="/bin/sh"
+          dir="${basedir}"
+          failonerror="true">
+      <arg line="-c 'set -e; opcontrol --stop; opcontrol --dump; opcontrol --shutdown'" />
+    </exec>
+
+  </target>
+
+
+  <!-- - - - cleanup - - - -->
+
+  <target name="clean" depends=""
+    description="Cleans project, returning it to pristine state." >
+    <delete dir="${bin.dir}" />
+    <!-- we add a delay only so clean step appears briefly in
+         the Eclipse console. -->
+    <sleep seconds="1" />
+  </target>
+
+
+  <!-- - - - source/target path debugging - - - -->
+
+  <!-- removes basedir prefix from pathnames -->
+  <filtermapper id="mapper.remove.basedir">
+    <replaceregex pattern="^${basedir}/(.*)"
+		  replace="\1" />
+  </filtermapper>
+
+  <!-- replaces basedir prefix with "(basedir)" for easier display -->
+  <filtermapper id="mapper.quote.basedir">
+    <replaceregex pattern="^${basedir}/(.*)"
+		  replace="(basedir)/\1" />
+  </filtermapper>
+
+  <target name="showpaths" depends="" if="${debug.paths}"
+    description="Displays source/target paths used for this project." >
+
+    <!-- show paths we're using -->
+    <echo message="basedir:   ${basedir}"   />
+    <echo message="" />
+    <echo message="jdk.home:  ${jdk.home}"  />
+    <echo message="java.home: ${java.home}" />
+    <echo message="" />
+    <echo message="src.dir:   ${src.dir}"   />
+    <echo message="bin.dir:   ${bin.dir}"   />
+    <echo message="" />
+
+    <pathconvert property="java.sources.echo" pathsep="${line.separator}">
+      <filelist dir="${basedir}" files="${java.sources}" />
+      <mapper refid="mapper.remove.basedir" />
+    </pathconvert>
+    <echo message="java.sources:" />
+    <echo message="${java.sources.echo}" />
+    <echo message="" />
+
+    <pathconvert property="java.sources.files.echo" pathsep="${line.separator}">
+      <filelist refid="java.sources.files" />
+      <mapper refid="mapper.quote.basedir" />
+    </pathconvert>
+    <echo message="java.sources.files:" />
+    <echo message="${java.sources.files.echo}" />
+    <echo message="" />
+
+    <pathconvert property="java.classes.files.echo" pathsep="${line.separator}">
+      <filelist refid="java.classes.files" />
+      <mapper refid="mapper.quote.basedir" />
+    </pathconvert>
+    <echo message="java.classes.files:" />
+    <echo message="${java.classes.files.echo}" />
+    <echo message="" />
+
+    <echo message="" />
+
+    <pathconvert property="compile.classpath.echo" pathsep="${line.separator}">
+      <path refid="compile.classpath" />
+      <mapper refid="mapper.quote.basedir" />
+    </pathconvert>
+    <echo message="compile.classpath:" />
+    <echo message="${compile.classpath.echo}" />
+    <echo message="" />
+
+    <pathconvert property="compile.sourcepath.echo" pathsep="${line.separator}">
+      <path refid="compile.sourcepath" />
+      <mapper refid="mapper.quote.basedir" />
+    </pathconvert>
+    <echo message="compile.sourcepath:" />
+    <echo message="${compile.sourcepath.echo}" />
+    <echo message="" />
+
+    <pathconvert property="run.classpath.echo" pathsep="${line.separator}">
+      <path refid="run.classpath" />
+      <mapper refid="mapper.quote.basedir" />
+    </pathconvert>
+    <echo message="run.classpath:" />
+    <echo message="${run.classpath.echo}" />
+    <echo message="" />
+
+  </target>
+
+
+<!-- ===================================================================== -->
+</project>
+<!-- ===================================================================== -->

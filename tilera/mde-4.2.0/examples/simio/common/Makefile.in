@@ -1,0 +1,35 @@
+# This is a -*- Makefile -*-
+
+ifndef TILERA_ROOT
+$(error TILERA_ROOT environment variable not set)
+endif
+
+CC := $(TILERA_ROOT)/bin/tile-gcc
+
+TILE_MONITOR := $(TILERA_ROOT)/bin/tile-monitor
+
+PARALLELIZE := $(TILERA_ROOT)/bin/parallelize
+
+CPPFLAGS = -O2 -g -MD -MP -Wall -Wshadow -Werror -I$(FROM)/../common
+CFLAGS = -std=gnu99 $(CPPFLAGS)
+
+LDFLAGS = -Wl,--gc-sections -Wl,--fatal-warnings
+
+
+COMMON_CC_SOURCES := \
+  Packet.cc \
+  PacketStream.cc
+
+COMMON_C_SOURCES := \
+  helper.c
+
+# Grab dependencies, if they exist.
+-include $(COMMON_CC_SOURCES:.cc=.d) $(COMMON_C_SOURCES:.c=.d))
+
+%.o: $(FROM)/../common/%.cc
+	g++ $< $(CPPFLAGS) -c -o $@ 
+
+%.o: $(FROM)/../common/%.c
+	gcc $< $(CFLAGS) -c -o $@
+
+COMMON_OBJ_FILES := $(COMMON_CC_SOURCES:.cc=.o) $(COMMON_C_SOURCES:.c=.o)

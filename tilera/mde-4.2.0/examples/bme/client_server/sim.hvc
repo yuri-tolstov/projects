@@ -1,0 +1,25 @@
+#
+# On the simulator we use a smaller configuration than the standard one, and
+# we don't need any devices, so we do all of the setup in this file.
+#
+
+#
+# Configure the Linux client to use memory controller 0.
+#
+client vmlinux
+  memory default 0
+  args quiet TLR_TELNETD=n
+
+#
+# By default the shared tile would end up being 0,0, which would conflict
+# with our BME tile.
+#
+options default_shared=1,1
+
+#
+# Define our one BME tile, and configure the BME client to use memory
+# controller 1.
+#
+bme bme_server private 0,0
+  memory 0 default
+  args bme_server

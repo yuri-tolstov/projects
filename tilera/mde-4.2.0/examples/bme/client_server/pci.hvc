@@ -1,0 +1,40 @@
+#
+# Import the standard .hvc file, which will define devices and start up
+# Linux for us.
+#
+# Handle CPU_SPEED, STRIPE_MEMORY, OPTIONS, and CONFIG_VERSION.
+
+include options.hvh
+
+
+# Include all possible devices.
+
+include devices.hvh
+
+
+# Run vmlinux.
+
+ifndef ARGS
+define ARGS TLR_NETWORK=auto
+endif
+
+#
+# Configure the Linux client to use memory controller 0.
+#
+client vmlinux
+  args $ARGS $XARGS
+  memory default 0
+
+# By default the shared tile would end up being 0,0, which would conflict
+# with our BME tile.
+#
+options default_shared=0,4
+
+#
+# Define our BME client, configured to use memory controller 1.
+# We start 16 BME tiles even though this example only actively uses one of
+# them, just to demonstrate that it can be done.
+#
+bme bme_server private 4x4
+  memory 0 default
+  args bme_server
