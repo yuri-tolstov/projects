@@ -1,4 +1,4 @@
-TARGET := callcap
+TARGET := callgen
 
 # Default target.
 all:
@@ -26,7 +26,7 @@ all: $(TARGET)
 clean:
 	rm -f *.o $(TARGET) $(TARGET).map
 
-$(TARGET): main.o ctrl.o net.o
+$(TARGET): main.o ctrl.o net.o calldb.o
 	$(CC) $(LIBMAP) $(LDFLAGS) $(XFLAGS) -o $@ $^ $(LIBS)
 
 %.o: %.c
