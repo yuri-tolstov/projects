@@ -1,5 +1,6 @@
 1. Sputnik Project, written in Lua
 http://sputnik.freewisdom.org/en/Installation
 
-
+2. LUA-C bindings
+http://rubenlaguna.com/wp/2012/11/26/first-steps-lua-cplusplus-integration/
 
