@@ -1,0 +1,110 @@
+#!/usr/bin/lua
+--******************************************************************************
+net = require("luanet")
+
+--==============================================================================
+-- Global Definitions
+--==============================================================================
+loopip = "127.0.0.1"  -- Loopback IP address
+uport = 1026  -- INETM-SRV UDP port(taken from ds11.common/usr/include/dsinetports.h)
+
+--==============================================================================
+-- State Machine
+--==============================================================================
+-- FSM Actions
+function noaction()
+end
+
+function sw2inet0()
+   os.execute("inetconf sw2inet0")
+end
+
+function sw2inet1()
+   os.execute("inetconf sw2inet1")
+end
+
+function inetdown()
+   os.execute("inetconf inetdown")
+end
+
+function fsmtbl_init(t)
+   local a = {}
+   for _, v in ipairs(t) do
+      local cstate, event, nstate, action = v[1], v[2], v[3], v[4]
+      if a[cstate] == nil then a[cstate] = {} end
+      a[cstate][event] = {nstate = nstate, action = action}
+   end
+   return a
+end
+
+-- FSM Table: {cstate, event, nstate, action}
+fsm = fsmtbl_init({
+-- INITIAL State:
+   {"initial",   "timer",     "initial",   noaction},
+   {"initial",   "link0up",   "up-down",   sw2inet0},
+   {"initial",   "link0down", "down-down", noaction},
+   {"initial",   "link1up",   "down-up",   noaction},
+   {"initial",   "link1down", "down-down", noaction},
+-- UP-DOWN State:
+   {"up-down",   "timer",     "up-down",   noaction},
+   {"up-down",   "link0up",   "up-down",   noaction},
+   {"up-down",   "link0down", "down-down", inetdown},
+   {"up-down",   "link1up",   "up-up",     noaction},
+   {"up-down",   "link1down", "up-down",   noaction},
+-- DOWN-UP State:
+   {"down-up",   "timer",     "down-up",   noaction},
+   {"down-up",   "link0up",   "up-up",     noaction},
+   {"down-up",   "link0down", "down-up",   noaction},
+   {"down-up",   "link1up",   "down-up",   noaction},
+   {"down-up",   "link1down", "down-down", inetdown},
+-- UP-UP State:
+   {"up-up",     "timer",     "up-up",     noaction},
+   {"up-up",     "link0up",   "up-up",     noaction},
+   {"up-up",     "link0down", "down-up",   sw2inet1},
+   {"up-up",     "link1up",   "up-up",     noaction},
+   {"up-up",     "link1down", "up-down",   noaction},
+-- DOWN-DOWN State:
+   {"down-down", "timer",     "down-down", noaction},
+   {"down-down", "link0up",   "up-down",   sw2inet0},
+   {"down-down", "link0down", "down-down", noaction},
+   {"down-down", "link1up",   "down-up",   sw2inet1},
+   {"down-down", "link1down", "down-down", noaction}
+})
+
+--==============================================================================
+-- Allocate and initialize a UDP Socket on the Local Loopback network.
+--==============================================================================
+soc = net.socket("udp")
+if soc == nil then
+  print("ERROR: failed to open socket")
+  os.exit()
+end
+ecode = net.setsockopt(soc, "reuseaddr", "on")
+if ecode == nil then
+  print("ERROR: setsockopt(reuseaddr) failed")
+  os.exit()
+end
+ecode = net.bind(soc, loopip, uport)
+if ecode == nil then
+  print("ERROR: failed to bind socket")
+  os.exit()
+end
+
+--==============================================================================
+-- Receive and process IEVENT messages.
+--==============================================================================
+stte = fsm["initial"]["timer"]
+state = stte.nstate 
+
+while true do
+   event, sip, sport = net.recvfrom(soc)
+   if event ~= nil then
+      -- print("EVENT:", event, "in STATE:", state)
+      a = fsm[state][event]
+      if a ~= nil then
+         a.action()
+         state = a.nstate
+      end
+   end
+end
+

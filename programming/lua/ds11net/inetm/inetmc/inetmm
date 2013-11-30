@@ -1,0 +1,29 @@
+#!/bin/sh
+LL0STAT=down
+LL1STAT=down
+NETINFOD=/sys/class/net
+
+while true; do
+   sleep 3
+   # Test INET0
+   LSTAT=$(cat $NETINFOD/eth0/operstate) 
+   if test "$LSTAT" != "$LL0STAT"; then
+      if test "$LSTAT" == "up"; then
+         inetme link0up
+      else
+         inetme link0down
+      fi
+      LL0STAT=$LSTAT
+   fi 
+   # Test INET1
+   LSTAT=$(cat $NETINFOD/eth1/operstate) 
+   if test "$LSTAT" != "$LL1STAT"; then
+      if test "$LSTAT" == "up"; then
+         inetme link1up
+      else
+         inetme link1down
+      fi
+      LL1STAT=$LSTAT
+   fi 
+done
+
