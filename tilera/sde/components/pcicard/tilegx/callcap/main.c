@@ -1,33 +1,6 @@
 /******************************************************************************/
 /* File:   callcap/main.c                                                     */
 /******************************************************************************/
-#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <malloc.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <poll.h>
-
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/dataplane.h>
-
-#include <asm/tilegxpci.h>
-#include <arch/atomic.h>
-
-#include <gxio/mpipe.h>
-#include <tmc/mem.h>
-#include <tmc/alloc.h>
-#include <tmc/task.h>
-#include <tmc/sync.h>
-#include <tmc/spin.h>
-#include <tmc/cpus.h>
-
 #include "local.h"
 
 /******************************************************************************/

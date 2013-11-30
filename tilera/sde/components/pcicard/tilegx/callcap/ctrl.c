@@ -1,26 +1,6 @@
 /******************************************************************************/
 /* File:   ctrl.c                                                             */
 /******************************************************************************/
-#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <malloc.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <poll.h>
-
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-
-#include <asm/tilegxpci.h>
-#include <tmc/task.h>
-#include <tmc/sync.h>
-#include <tmc/spin.h>
-
 #include "local.h"
 
 /******************************************************************************/

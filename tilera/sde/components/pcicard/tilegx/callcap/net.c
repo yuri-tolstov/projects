@@ -1,29 +1,6 @@
 /******************************************************************************/
 /* File:   callcap/net.c                                                      */
 /******************************************************************************/
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <pthread.h>
-
-#include <sys/mman.h>
-#include <sys/dataplane.h>
-
-#include <tmc/alloc.h>
-
-#include <arch/atomic.h>
-#include <arch/sim.h>
-
-#include <gxio/mpipe.h>
-
-#include <tmc/cpus.h>
-#include <tmc/mem.h>
-#include <tmc/spin.h>
-#include <tmc/sync.h>
-#include <tmc/task.h>
-
 #include "local.h"
 
 /*----------------------------------------------------------------------------*/
@@ -93,8 +70,15 @@ printf("[%d] Get packet(s), n=%d\n", iix, n);
       /*Reserve slots.  NOTE: This might spin.*/
       slot = gxio_mpipe_equeue_reserve_fast(equeue, n);
 
-      /*Send packet(s) out.*/
+      /*Process packet(s).*/
       for (i = 0; i < n; i++) {
+         /*Detect Call(s), clone the packet and pass it to antother Tile, if necessary.*/
+         //TODO: For now, inspect and record the packet using this Tile.
+         if (ccap_detect_call(&idescs[i])) {
+            ccap_add_record(&idescs[i]);
+         }
+
+         /*Send the packets out on the peer port.*/
          gxio_mpipe_edesc_copy_idesc(&edescs[i], &idescs[i]);
 #if 1
          /*Drop "error" packets (but ignore "checksum" problems).*/
@@ -102,7 +86,6 @@ printf("[%d] Get packet(s), n=%d\n", iix, n);
             edescs[i].ns = 1;
          }
 #endif
-         /*Send the packets out*/
          gxio_mpipe_equeue_put_at(equeue, edescs[i], slot + i);
          gxio_mpipe_iqueue_consume(iqueue, &idescs[i]);
       }
