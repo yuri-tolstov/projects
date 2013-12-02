@@ -49,7 +49,8 @@ void* net_thread(void *arg);
 int ccap_detect_call(gxio_mpipe_idesc_t *idesc);
 
 /*Trace buffer processing*/
-void ccap_add_record(gxio_mpipe_idesc_t *idesc);
+void ccap_trace_init(int nrecs, int mreclen);
+void ccap_trace_add(int iifx, gxio_mpipe_idesc_t *idesc);
 
 /*----------------------------------------------------------------------------*/
 #endif /*__LOCAL_H__*/

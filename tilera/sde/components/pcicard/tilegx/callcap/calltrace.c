@@ -28,49 +28,49 @@ int ccap_detect_call(gxio_mpipe_idesc_t *idesc)
 /*Global Trace Control.*/
 static int trcen; /*Start/Stop switch: 0=disable, 1=enable*/
 static int mode; /*Method of recording: 0=till full, 1=circular buffer*/
-static int avepktl; /*Average recorded packet length.*/
+static int maxrecl; /*Maximum recorded packet length.*/
 static int numrecs; /*Number of records per packet buffer.*/
 
 /*Trace Record*/
-typedef struct record_descr_s {
+typedef struct record_ctrl_s {
    uint64_t tm; /*Timestamp, in CPU cycles*/
    uint16_t pktlen; /*Packet size*/
    uint16_t reclen; /*Recorded packet size*/
    uint32_t __nu; /*Alignment to 64-bit boundary*/
    char *pktb; /*Packet buffer (one packet)*/
    /*pktb is calculated as aligned(pktb + reclen) in the previous slot.*/
-} record_descr_t;
+} record_ctrl_t;
 
 /*Trace Control Block*/
 typedef struct trace_ctrl_s {
    int recix; /*Index of last current record*/
    int nrecs; /*Number of records in the buffer*/
-   record_descr_t *rcb; /*Block of record descriptors*/
-   char *pktbuf; /*Packet buffer*/
+   record_ctrl_t *rcb; /*Block of record descriptors*/
+   char *pktb; /*Packet buffer*/
 } trace_ctrl_t;
 static trace_ctrl_t trccblk[CCAP_NUMLINKS]; /*Trace Control Blocks*/
 
 
 /*============================================================================*/
-void ccap_trace_init(int nrecs, int apktl)
+void ccap_trace_init(int nrecs, int mreclen)
 /*============================================================================*/
 /* 1. Allocate 4 packet buffers -- one per link.
  * 2. Split Packet Buffer on slots each having size of Max. recorded length.
  * 3. Initialize Global Trace Control structure.
  */
 {
+   int i; /*Index*/
    trace_ctrl_t *tcb; /*Trace Control Block*/
 
-   numrecs = nrecs;  avepktl = apktl;
-   trcen = 0;
-   mode = 0;
+   numrecs = nrecs;  maxrecl = mreclen;
+   trcen = 0;  mode = 0;
 
    for (i = 0; i < CCAP_NUMLINKS; i++) {
       tcb = &trccblk[i];
       tcb->recix = 0;  tcb->nrecs = 0;
-      tcb->rcb = calloc(numrecs, sizeof(record_descr_t));  assert(tcb->rcb != NULL);
-      tcb->pktbuf = malloc(numrecs * avepktl);  assert(tcb->pktbuf != NULL);
-      if (i = 0) tcb->rcb[0].pktb = tcb->pktbuf;
+      tcb->rcb = calloc(numrecs, sizeof(record_ctrl_t));  assert(tcb->rcb != NULL);
+      tcb->pktb = malloc(numrecs * maxrecl);  assert(tcb->pktb != NULL);
+      if (i == 0) tcb->rcb[0].pktb = tcb->pktb;
    }
 }
 
@@ -78,18 +78,27 @@ void ccap_trace_init(int nrecs, int apktl)
 void ccap_trace_add(int iifx, gxio_mpipe_idesc_t *idesc)
 /*============================================================================*/
 {
-   trace_trccb_t *tcb; /*Trace Control Block*/
-   record_descr_t *rcbc, *rcbn; /*Current and Next record control block/descriptors*/
+   trace_ctrl_t *tcb; /*Trace Control Block*/
+   record_ctrl_t *rcb; /*Record control block/descriptors*/
+   char *pktbp; /*Pointer to the current slot in the packet buffer.*/
+   int reclen; /*Current record length.*/
+   void *pva; /*Packet virtual address*/
 
    if (trcen) {
-      tcb = trccblk[iifx];
-      if (tcb->recix < (tcb->numrecs - 1)) {
-         rcbc = &tcb->rcb[tcb->recix];
-         rcbc->tm = xxx();
-         memcpy(rcbc->pktb, idesc->xxx, idesc->yyy);
+      tcb = &trccblk[iifx];
+      if (tcb->recix < (tcb->nrecs - 1)) {
+         /*Current record*/
+         rcb = &tcb->rcb[tcb->recix];
+         rcb->tm = __insn_mfspr(SPR_CYCLE);
+         rcb->pktlen = gxio_mpipe_idesc_get_l2_length(idesc);
+         reclen = (rcb->pktlen > maxrecl) ? maxrecl : rcb->pktlen;
+         pktbp = rcb->pktb;
+         pva = gxio_mpipe_idesc_get_l2_start(idesc);
+         memcpy(pktbp, pva, reclen);
+         /*Next record*/
          tcb->recix++;
-         rcbn = &tcb->rcb[tcb->recix];
-         rcbn->pktb = rcbc->pktb + rcbc->reclen + __alignment__;
+         rcb = &tcb->rcb[tcb->recix];
+         rcb->pktb = pktbp + reclen; //TODO: + __alignment__
       }
    }
 }

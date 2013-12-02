@@ -75,7 +75,7 @@ printf("[%d] Get packet(s), n=%d\n", iix, n);
          /*Detect Call(s), clone the packet and pass it to antother Tile, if necessary.*/
          //TODO: For now, inspect and record the packet using this Tile.
          if (ccap_detect_call(&idescs[i])) {
-            ccap_add_record(&idescs[i]);
+            ccap_trace_add(0, &idescs[i]); //TODO: Use actual link number.
          }
 
          /*Send the packets out on the peer port.*/
