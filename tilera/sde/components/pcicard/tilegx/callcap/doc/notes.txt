@@ -1,0 +1,69 @@
+#include "local.h"
+
+/******************************************************************************/
+/* Call Detection.                                                            */
+/******************************************************************************/
+/*============================================================================*/
+int ccap_detect_call(gxio_mpipe_idesc_t *idesc)
+/*============================================================================*/
+{
+   return 0;
+}
+
+/******************************************************************************/
+/* Trace Buffer.                                                              */
+/******************************************************************************/
+//NOTES:
+// 1. Each Tile, processing specific Ingress port, work with its own Trace Buffer.
+//    No locks are necessary.
+// 2. Tracing stops, as soon as the 1st trace buffer is full.
+//=============================================================================
+/*Trace Record*/
+typedef struct trace_record_s {
+   uint64_t tm; /*Timestamp, in CPU cycles*/
+   uint16_t pktlen; /*Packet size*/
+   uint16_t reclen; /*Recorded packet size*/
+   uint32_t __nu; /*Alignment to 64-bit boundary*/
+   char *pktb; /*Packet buffer*/
+} trace_record_t;
+
+/*Trace Control Block*/
+typedef struct trace_ctrl_s {
+   int trcen; /*Start/Stop switch: 0=disable, 1=enable*/
+   int mode; /*Method of recording: 0=till full, 1=circular buffer*/
+   int recix; /*Index of last current record*/
+   int numrecs; /*Maximum records in the buffer*/
+} trace_ctrl_t;
+trace_ctrl_t trccblk[CCAP_NUMLINKS]; /*Trace Control Blocks*/
+
+
+/*============================================================================*/
+void ccap_trace_init(void)
+/*============================================================================*/
+{
+   for (i = 0; i < CCAP_NUMLINKS; i++) {
+      trccblk[i].trcen = 0;
+      trccblk[i].mode = 0;
+      trccblk[i].recix = 0;
+      trccblk[i].numrecs = CCAP_TRCBUF_SIZE;
+   }
+}
+
+/*============================================================================*/
+void ccap_trace_add(int iifx, gxio_mpipe_idesc_t *idesc)
+/*============================================================================*/
+{
+   trace_record_t *trec; /*Record*/
+   trace_trccb_t *tcb = trccblk[iifx]; /*Trace Control Block*/
+
+   if (tcb->trcen) {
+      if (tcb->recix < tcb->numrecs) {
+         trec = &trcbuf[tcb->recix];
+         trec->tm = xxx();
+         memcpy(trec->pktb, idesc->xxx, idesc->yyy); 
+         tcb->recix++;
+      }
+   }
+}
+
+
