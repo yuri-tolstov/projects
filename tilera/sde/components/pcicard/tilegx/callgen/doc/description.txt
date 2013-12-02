@@ -1,2 +1,4 @@
-1. Uses Packet Queue queue to communicate between Host and Tile.
+1. Uses Zero-Copy (trio/h2t and trio/t2h) queue to communicate between Host and Tile. Based on gxpci_zero_copy program and having in addition:
+a) Independent H2T and T2H threads.
+
 
