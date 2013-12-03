@@ -17,7 +17,7 @@ endif
 OPT = -Os
 CFLAGS = -std=gnu99 -Wall -Werror -g $(OPT) -pthread
 LDFLAGS = -g $(if $(filter -m32, $(XFLAGS)), -static) -pthread
-LIBS = -lgxio -ltmc
+LIBS = -lgxpci -lgxio -ltmc
 LIBMAP = -Wl,-Map=$(TARGET).map
 
 .PHONY: all clean

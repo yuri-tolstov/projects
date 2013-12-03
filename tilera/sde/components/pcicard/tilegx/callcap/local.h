@@ -25,6 +25,8 @@
 #include <arch/sim.h>
 
 #include <gxio/mpipe.h>
+#include <gxio/trio.h>
+#include <gxpci/gxpci.h>
 #include <tmc/mem.h>
 #include <tmc/alloc.h>
 #include <tmc/task.h>
