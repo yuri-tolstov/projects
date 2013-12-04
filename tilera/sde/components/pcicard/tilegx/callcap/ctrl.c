@@ -3,6 +3,10 @@
 /******************************************************************************/
 #include "local.h"
 
+#define MAX_PKT_SIZE (4 * 1024)
+#define MAX_PKTS     GXPCI_HOST_PQ_SEGMENT_ENTRIES
+#define MAP_LENGTH   (MAX_PKTS * MAX_PKT_SIZE)
+
 /*Message header*/
 typedef struct ccap_mhdr_s {
    int16_t mtype; /*Message type*/
@@ -14,17 +18,17 @@ typedef struct ccap_mhdr_s {
 void* h2t_thread(void *arg)
 /******************************************************************************/
 {
-   int i, c; /*Index, Return code*/
+   //int i, c; /*Index, Return code*/
    gxpci_comp_t comp;
    gxpci_cmd_t cmd;
-   chaar *mbuf; /*Message buffer*/
+   char *mbuf; /*Message buffer*/
    ccap_mhdr_t *mh; /*Message header*/
 
    /*Allocate and register data buffers.*/
    tmc_alloc_t alloc = TMC_ALLOC_INIT;
    tmc_alloc_set_huge(&alloc);
    mbuf = tmc_alloc_map(&alloc, MAP_LENGTH);  assert(mbuf);
-   mh = mbuf;
+   mh = (ccap_mhdr_t *)mbuf;
 
    if (gxpci_iomem_register(h2tcon, mbuf, MAP_LENGTH) != 0) {
       tmc_task_die("gxpci_iomem_register(H2T) failed");
@@ -54,18 +58,18 @@ void* h2t_thread(void *arg)
 void* t2h_thread(void *arg)
 /******************************************************************************/
 {
-   int i, c; /*Index, Return code*/
+   // int i, c; /*Index, Return code*/
    gxpci_comp_t comp;
    gxpci_cmd_t cmd;
-   chaar *mbuf; /*Message buffer*/
+   char *mbuf; /*Message buffer*/
    ccap_mhdr_t *mh; /*Message header*/
-   int msize; /*Message size*/
+   int msize = 0; /*Message size*/
 
    /*Allocate and register data buffers.*/
    tmc_alloc_t alloc = TMC_ALLOC_INIT;
    tmc_alloc_set_huge(&alloc);
    mbuf = tmc_alloc_map(&alloc, MAP_LENGTH);  assert(mbuf);
-   mh = mbuf;
+   mh = (ccap_mhdr_t *)mbuf;
 
    if (gxpci_iomem_register(t2hcon, mbuf, MAP_LENGTH) != 0) {
       tmc_task_die("gxpci_iomem_register(H2T) failed");

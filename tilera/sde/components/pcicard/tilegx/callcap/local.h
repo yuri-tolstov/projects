@@ -27,6 +27,7 @@
 #include <gxio/mpipe.h>
 #include <gxio/trio.h>
 #include <gxpci/gxpci.h>
+
 #include <tmc/mem.h>
 #include <tmc/alloc.h>
 #include <tmc/task.h>
@@ -48,8 +49,8 @@ void* t2h_thread(void *arg);
 void* net_thread(void *arg);
 
 /*Host-Tile communication channel.*/
-export gxpci_context_t *h2tcon;
-export gxpci_context_t *t2hcon;
+extern gxpci_context_t *h2tcon;
+extern gxpci_context_t *t2hcon;
 
 /*Call processing*/
 int ccap_detect_call(gxio_mpipe_idesc_t *idesc);
