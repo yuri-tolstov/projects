@@ -32,8 +32,8 @@ static gxio_trio_context_t triocontext; /*TRIO context*/
 static gxio_trio_context_t* triocon = &triocontext;
 static gxpci_context_t h2tcontext;
 static gxpci_context_t t2hcontext;
-static gxpci_context_t *h2tcon = &h2tcontext;
-static gxpci_context_t *t2hcon = &t2hcontext;
+gxpci_context_t *h2tcon = &h2tcontext;
+gxpci_context_t *t2hcon = &t2hcontext;
 static int triox = 0;
 static int queuex = 0;
 static gxpci_queue_type_t queuetype = GXPCI_PQ_DUPLEX;

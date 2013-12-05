@@ -47,6 +47,10 @@ void* h2t_thread(void *arg);
 void* t2h_thread(void *arg);
 void* net_thread(void *arg);
 
+/*Host-Tile communication channel.*/
+export gxpci_context_t *h2tcon;
+export gxpci_context_t *t2hcon;
+
 /*Call processing*/
 int ccap_detect_call(gxio_mpipe_idesc_t *idesc);
 

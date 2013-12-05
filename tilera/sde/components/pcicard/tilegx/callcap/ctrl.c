@@ -3,110 +3,90 @@
 /******************************************************************************/
 #include "local.h"
 
-/******************************************************************************/
-void* t2h_thread(void *arg)
-/******************************************************************************/
-{
-   const char* path = "/dev/trio0-mac0/t2h/0";
-   // int c, n; /*Return code, Number of bytes*/
-   int i; /*Index*/
-   int c; /*Return code*/
-   int fd; /*File descriptor*/
-   char *mbuf; /*Message buffer*/
-   int msize = 4096; /*Message size*/
-
-#if 1 //TODO:debug
-printf("T2H thread.\n");
-while (1);
-#endif
-   // tmc_sync_barrier_wait(&syncbar);
-   /*Open the T2H channel.*/
-   if ((fd = open(path, O_RDWR)) < 0) {
-   // if ((fd = open(path, O_RDWR|O_NONBLOCK)) < 0) {
-      printf("Failed to open %s (errno=%d)\n", path, errno);
-      abort();
-   }
-   printf("T2H: Opened\n");
-   /*Allocate message buffer and register it to TRIO.*/
-   mbuf = memalign(getpagesize(), msize);  assert(mbuf != NULL);
-   tilegxpci_buf_info_t bufd = { /*Buffer descriptor*/
-      .va = (uintptr_t)mbuf,
-      .size = getpagesize(),
-   };
-   c = ioctl(fd, TILEPCI_IOC_REG_BUF, &bufd);  assert(c == 0);
-
-   /*Construct Send command and post it to the PCI.*/
-   tilepci_xfer_req_t txcmd = { /*TX Command descriptor*/
-      .addr = (uintptr_t)mbuf,
-      .len = msize,
-      .cookie = 0,
-   };
-   i = 1;
-   while (1) {
-      while (write(fd, &txcmd, sizeof(txcmd)) != sizeof(txcmd));
-
-      /*Read back the completion.*/
-      tilepci_xfer_comp_t comp; /*Completion status*/
-      while (read(fd, &comp, sizeof(comp)) != sizeof(comp));
-
-      printf("T2H: Sent message %d\n", i);
-      sleep(30);
-      i++;
-   }
-   close(fd);
-   return NULL;
-}
+/*Message header*/
+typedef struct ccap_mhdr_s {
+   int16_t mtype; /*Message type*/
+   int16_t dlen; /*Data/payload length*/
+   /*Data follows the header.*/
+} ccap_mhdr_t;
 
 /******************************************************************************/
 void* h2t_thread(void *arg)
 /******************************************************************************/
 {
-   const char* path = "/dev/trio0-mac0/h2t/0";
-   // int c, n; /*Return code, Number of bytes*/
-   int i; /*Index*/
-   int c; /*Return code*/
-   int fd; /*File descriptor*/
-   char *mbuf; /*Message buffer*/
-   int msize = 4096; /*Message size*/
+   int i, c; /*Index, Return code*/
+   gxpci_comp_t comp;
+   gxpci_cmd_t cmd;
+   chaar *mbuf; /*Message buffer*/
+   ccap_mhdr_t *mh; /*Message header*/
 
-#if 1 //TODO:debug
-printf("H2T thread.\n");
-while (1);
-#endif
-   // tmc_sync_barrier_wait(&syncbar);
-   /*Open the H2T channel.*/
-   if ((fd = open(path, O_RDWR)) < 0) {
-   // if ((fd = open(path, O_RDWR|O_NONBLOCK)) < 0) {
-      printf("Failed to open %s (errno=%d)\n", path, errno);
-      abort();
+   /*Allocate and register data buffers.*/
+   tmc_alloc_t alloc = TMC_ALLOC_INIT;
+   tmc_alloc_set_huge(&alloc);
+   mbuf = tmc_alloc_map(&alloc, MAP_LENGTH);  assert(mbuf);
+   mh = mbuf;
+
+   if (gxpci_iomem_register(h2tcon, mbuf, MAP_LENGTH) != 0) {
+      tmc_task_die("gxpci_iomem_register(H2T) failed");
    }
-   printf("H2T: Opened\n");
-   /*Allocate message buffer and register it to TRIO.*/
-   mbuf = memalign(getpagesize(), msize);  assert(mbuf != NULL);
-   tilegxpci_buf_info_t bufd = { /*Buffer descriptor*/
-      .va = (uintptr_t)mbuf,
-      .size = getpagesize(),
-   };
-   c = ioctl(fd, TILEPCI_IOC_REG_BUF, &bufd);  assert(c == 0);
-
-   /*Construct receive command and post it to the PCI.*/
-   tilepci_xfer_req_t rxcmd = { /*Rx Command descriptor*/
-      .addr = (uintptr_t)mbuf,
-      .len = msize,
-      .cookie = 0,
-   };
-   i = 1;
+   /*Receive and process message from the Host*/
    while (1) {
-      while (write(fd, &rxcmd, sizeof(rxcmd)) != sizeof(rxcmd));
-
-      /*Read back the completion.*/
-      tilepci_xfer_comp_t comp; /*Completion status*/
-      while (read(fd, &comp, sizeof(comp)) != sizeof(comp));
-
-      printf("H2T: Received message %d\n", i);
-      i++;
+      /*Post empty buffer.*/
+      if (gxpci_get_cmd_credits(h2tcon) <= 0) {
+         continue;
+      }
+      cmd.buffer = mbuf;
+      cmd.size = MAX_PKT_SIZE;
+      if (gxpci_pq_h2t_cmd(h2tcon, &cmd) < 0) {
+         continue;
+      }
+      /*Get data.*/
+      if (gxpci_get_comps(h2tcon, &comp, 0, 1) < 0) {
+         continue;
+      }
+      /*Process the message.*/
+      //TODO:
    }
-   close(fd);
+   return NULL;
+}
+
+/******************************************************************************/
+void* t2h_thread(void *arg)
+/******************************************************************************/
+{
+   int i, c; /*Index, Return code*/
+   gxpci_comp_t comp;
+   gxpci_cmd_t cmd;
+   chaar *mbuf; /*Message buffer*/
+   ccap_mhdr_t *mh; /*Message header*/
+   int msize; /*Message size*/
+
+   /*Allocate and register data buffers.*/
+   tmc_alloc_t alloc = TMC_ALLOC_INIT;
+   tmc_alloc_set_huge(&alloc);
+   mbuf = tmc_alloc_map(&alloc, MAP_LENGTH);  assert(mbuf);
+   mh = mbuf;
+
+   if (gxpci_iomem_register(t2hcon, mbuf, MAP_LENGTH) != 0) {
+      tmc_task_die("gxpci_iomem_register(H2T) failed");
+   }
+   /*Receive Tile internal events and send data to the Host, if necessary.*/
+   while (1) {
+      //TODO: Receive Internal event
+      //
+      /*Initialize and post the message.*/
+      if (gxpci_get_cmd_credits(t2hcon) <= 0) {
+         continue;
+      }
+      //mh.mtype = xxx;
+      //mh.dlen = msize;
+      cmd.buffer = mbuf;
+      cmd.size = sizeof(ccap_mhdr_t) + msize;
+      if (gxpci_pq_t2h_cmd(t2hcon, &cmd) < 0) {
+         continue;
+      }
+      gxpci_get_comps(t2hcon, &comp, 0, 1);
+   }
    return NULL;
 }
 
