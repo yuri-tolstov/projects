@@ -17,29 +17,30 @@
 
 #include <asm/tilegxpci.h>
 
-static int qbufsize = RING_BUF_ELEM_SIZE; /*Queue buffer size*/
-static int qringelems = RING_BUF_ELEMS; /*Queue ring elements.*/
+/*UI-Proxy Message Types*/
+enum {
+   UMSG_TYPE_UNDEF,
+   UMSG_TYPE_CONFIG,   /*Configure*/
+   UMSG_TYPE_START,    /*Start*/
+   UMSG_TYPE_STOP,     /*Stop*/
+   UMSG_TYPE_RDTRACE,  /*Read trace*/
+   UMSG_TYPE_MAX
+};
+
+/*TileGx-Proxy Message Types*/
+enum {
+   TMSG_TYPE_UNDEF,
+   TMSG_TYPE_CONFIG,   /*Configure*/
+   TMSG_TYPE_START,    /*Start*/
+   TMSG_TYPE_STOP,     /*Stop*/
+   TMSG_TYPE_RDTRACE,  /*Read trace*/
+   TMSG_TYPE_MAX
+};
+
+static int qelemsz = RING_BUF_ELEM_SIZE; /*Queue buffer size*/
+static int qelems = RING_BUF_ELEMS; /*Queue ring elements.*/
 
 
-   snprintf(h2tpq.dev_name, sizeof(h2tpq.dev_name),
-            "/dev/tilegxpci%d/packet_queue/h2t/%d", cardix, queueix);
-   pq_init(&t2hpq);
-   pq
-   pq_init(&h2tpq);
-
-
-   /*Control threads/tasks.*/
-   n = 0;
-   if (pthread_create(&tid[n], NULL, h2t_thread, NULL) != 0) {
-      tmc_task_die("Failed to create H2T thread\n");
-   } 
-   n++;
-   if (pthread_create(&tid[n], NULL, t2h_thread, NULL) != 0) {
-      tmc_task_die("Failed to create T2H thread\n");
-   } 
-
-
- 
 /******************************************************************************/
 void* t2u_thread(void *arg)
 /******************************************************************************/
@@ -71,13 +72,13 @@ void* t2u_thread(void *arg)
    assert(q.pq_regs != MAP_FAILED);
 
    /*Ring buffer.*/
-   qd.buf_size = qbufsize;
+   qd.buf_size = qelemsz;
    if ((c = ioctl(fd, TILEPCI_IOC_SET_PACKET_QUEUE_BUF, &qd)) < 0) {
       printf("Failed to configure ring buffer, errno=%d\n", errno);
       goto t2u_thread_failed;
    }
    /*Get access to the queue data and status info.*/
-   n = qbufsize * qringelems;
+   n = qelemsz * qelems;
    q.buffer = mmap(0, n, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
                    TILEPCI_PACKET_QUEUE_BUF_MMAP_OFFSET);
    assert(q.buffer != MAP_FAILED);
@@ -94,7 +95,35 @@ void* t2u_thread(void *arg)
    /*-------------------------------------------------------------------------*/
    /* Process messages (from TileGx).                                         */
    /*-------------------------------------------------------------------------*/
+   volatile uint32_t *cons = &(q.pq_regs->consumer_index); /*Consumer index*/
+   volatile uint32_t *prod = &(q.pq_regs->producer_index); /*Producer index*/
+   volatile enum gxpci_chan_status_t *qstat = (q.pq_status->status); /*Queue status*/
+   uint32_t read, write; /*Read and Write indexes*/
+   //TODO:
+   void *umhdr; /*UI message header.*/ 
+   void *tmhdr; /*TileGx message header.*/ 
 
+   while (1) {
+      /*Get message from TileGx (T2H channel)*/
+      if (*status == GXPCI_CHAN_RESET) {
+         goto t2u_thread_failed;
+      }
+      write = *prod;  read = 0;
+      while (write != read) {
+         read++;
+         *cons = read;
+         umhdr = q.buffer + read * qelemsz;
+         switch (umhdr->mtype) {
+         case UMSG_TYPE_CONFIG: break;
+         case UMSG_TYPE_START: break;
+         case UMSG_TYPE_STOP: break;
+         case UMSG_TYPE_RDTRACE: break;
+         default: break;
+         }
+         /*Route message to TileGx*/
+         //TODO:...
+      }
+   } /*while*/
 
    /*-------------------------------------------------------------------------*/
    /* Exit and error handler.                                                 */
@@ -112,13 +141,42 @@ void* u2t_thread(void *arg)
  * UI Station Comm.Channel = TCP socket (receive).
  */
 {
-   host_packet_queue_t h2tpq; /*H2T packet queue info*/
+   int i, c, n; /*Index, Code, Number of bytes*/
+   host_packet_queue_t q; /*H2T packet queue info*/
+   tilepci_packet_queue_info_t qd; /*Queue descriptor.*/
+   int fd; /*File descriptor*/
 
    /*-------------------------------------------------------------------------*/
    /* Open communication channel with TileGx (output).                        */
    /*-------------------------------------------------------------------------*/
    snprintf(h2tpq.dev_name, sizeof(h2tpq.dev_name),
             "/dev/tilegxpci0/packet_queue/h2t/%d", cardix, queueix);
+   if ((fd = open(q.dev_name, O_RDWR)) < 0) {
+      printf("Failed to open H2T channel.\n");
+      goto u2t_thread_failed;
+   }
+   q.pq_regs = (struct gxpci_host_pq_regs_app*)
+      mmap(0, sizeof(struct gxpci_host_pq_regs_app),
+           PROT_READ | PROT_WRITE,
+           MAP_SHARED, fd, TILEPCI_PACKET_QUEUE_INDICES_MMAP_OFFSET);
+   assert(q.pq_regs != MAP_FAILED);
+
+   /*Ring buffer.*/
+   qd.buf_size = qelemsz;
+   if ((c = ioctl(fd, TILEPCI_IOC_SET_PACKET_QUEUE_BUF, &qd)) < 0) {
+      printf("Failed to configure ring buffer, errno=%d\n", errno);
+      goto u2t_thread_failed;
+   }
+   /*Get access to the queue data and status info.*/
+   n = qelemsz * qelems;
+   q.buffer = mmap(0, n, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
+                   TILEPCI_PACKET_QUEUE_BUF_MMAP_OFFSET);
+   assert(q.buffer != MAP_FAILED);
+
+   q.pq_status = mmap(0, sizeof(struct tlr_pq_status), PROT_READ | PROT_WRITE,
+                      MAP_SHARED, fd, TILEPCI_PACKET_QUEUE_STS_MMAP_OFFSET);
+   assert(q.pq_status != MAP_FAILED);
+   q.pq_regs->producer_index = 0;
 
    /*-------------------------------------------------------------------------*/
    /* Open communication channel with UI Station (input).                     */
