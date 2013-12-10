@@ -1,0 +1,4 @@
+1. Calling Lua from C and C from Lua.
+
+2. Compile:
+$ gcc test.c -llua
