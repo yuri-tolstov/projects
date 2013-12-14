@@ -1,0 +1,34 @@
+================================================================================
+Install IUP Lua on Linux CentOS.
+================================================================================
+1. See instructions on:
+	http://www.tecgraf.puc-rio.br/iup/en/building.html
+
+2. Main steps:
+	1) Prereqs:
+		yum install gtkx-devel gtk2-devel
+			libXpm-devel libXmu-devel libX11-devel
+			openmodif-devel webkitgtk-devel readline-devel
+	2) Download and install in the following order:
+		cd-5.7.0_Sources.tar.gz
+		sudo make
+		./install
+		./install_dev
+
+		im-3.8.2_Sources.tar.gz
+		sudo make
+		./install
+		./install_dev
+
+		lua-5.2.3-Sources.tar.gz
+		make
+		sudo make install
+
+		iup-3.9_Linux26g4_64_lib.tar.gz
+		./config_lua_module	=> line 4 and 5: Use Lua52
+		./install
+		./install_dev
+
+3. Run IUP Lua program:
+$ export LUA_CPATH=/usr/lib64/lib?52.so
+$ lua iuplua_myprog.lua
