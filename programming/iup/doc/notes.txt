@@ -28,6 +28,16 @@ Install IUP Lua on Linux CentOS.
 		./config_lua_module	=> line 4 and 5: Use Lua52
 		./install
 		./install_dev
+		Or, if build from Sources...
+		iup-3.9_Source.tar.gz
+                Modify build environment: (see iup subdirectory here)
+			config_lua_module
+			tecmake.mak		-- Eliminate LUA5.1
+			srcleds/config.mak	-- Add LIBS += dl
+		$ su
+		# find . -name "*51.dep" -exec rm -f {} \;
+		# export USE_LUA52=Yes
+		# make
 
 3. Run IUP Lua program:
 $ export LUA_CPATH=/usr/lib64/lib?52.so
