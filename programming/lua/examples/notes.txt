@@ -1,0 +1,6 @@
+1. Using precompiled code:
+$ luac -o prog.lc luascript.lua
+$ lua prog.lc
+
+
+
