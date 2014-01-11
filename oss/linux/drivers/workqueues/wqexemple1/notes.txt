@@ -1,0 +1,23 @@
+1. Compile:
+$ make
+This generates example1.ko in the current directory.
+# modinfo wqexample1.ko
+
+2. Install:
+# insmod wqexample1.ko
+
+3. Verify:
+$ tail /var/log/messages
+$ dmesg
+$ lsmod | grep example1
+
+4. Uninstall:
+# rmmod wqexample1
+
+5. To automaticall start the module, when the Linux is coming up:
+# mkdir /lib/modules/$(uname -r)/kernel/drivers/example1
+# cp example1.ko /lib/modules/$(uname -r)/kernel/drivers/example1
+# vi /etc/modules
+vi> Add line: wqexample1
+# reboot
+
