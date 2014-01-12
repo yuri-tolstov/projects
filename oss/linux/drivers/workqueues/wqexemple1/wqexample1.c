@@ -40,6 +40,18 @@ int init_module(void)
    }
    return 0;
 }
+/*
+ * boot queue_work(struct workqueue_struct *wq, struct work_struct *work)
+ * {
+ *    int cpu = smp_processor_id();
+ *    ulong_t flags;
+ *    local_irq_save(flags);
+ *    if (!test_and_set_bit(WORK_STRUCT_PENDING_BIT, work_data_bits(work))) {
+ *       __queue_work(cpu, wq, work);  //This is big function... in workqueue.c
+ *    }
+ *    local_irq_restore(flags);
+ * }
+ */
 
 void cleanup_module(void)
 {
