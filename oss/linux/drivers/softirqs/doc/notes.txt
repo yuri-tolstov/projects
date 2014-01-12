@@ -1,0 +1,9 @@
+================================================================================
+1. Netwoking driver.
+================================================================================
+The TH Interrupt Handler calls napi_schedule(...)
+which calls __napi_schedule(struct softinet_data *sd, struct napi_struct *napi)
+which calls __raise_softirq_irqoff(NET_RX_SOFTIRQ)
+
+
+
