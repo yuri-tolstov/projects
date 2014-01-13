@@ -1,0 +1,6 @@
+References:
+
+1. Linux Device Drivers boot, 3rd edition
+http://code.google.com/p/ldd3/source/browse/#svn%2Ftrunk
+
+
