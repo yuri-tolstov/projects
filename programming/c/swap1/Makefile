@@ -1,4 +1,6 @@
 TARGET := swap
+
+CC := gcc
 CFLAGS = -g -Wall
 
 .PHONY: all clean
@@ -9,5 +11,5 @@ clean:
 	rm -f $(TARGET) *.o
 
 $(TARGET): main.c
-	$(LINK.cc) $^ -o $@
+	$(LINK.c) $^ -o $@
 
