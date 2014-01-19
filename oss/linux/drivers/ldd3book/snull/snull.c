@@ -79,11 +79,12 @@ struct snull_packet {
 int pool_size = 8;
 module_param(pool_size, int, 0);
 
-/*
- * This structure is private to each device. It is used to pass
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+struct snull_priv {
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* This structure is private to each device. It is used to pass
  * packets in and out, so there is place for a packet
  */
-struct snull_priv {
    struct net_device_stats stats;
    int status;
    struct snull_packet *ppool;
@@ -154,7 +155,6 @@ struct snull_packet *snull_get_tx_buffer(struct net_device *dev) {
    return pkt;
 }
 
-
 void snull_release_buffer(struct snull_packet *pkt) {
    unsigned long flags;
    struct snull_priv *priv = netdev_priv(pkt->dev);
@@ -198,10 +198,9 @@ static void snull_rx_ints(struct net_device *dev, int enable) {
    priv->rx_int_enabled = enable;
 }
 
-/*
- * Open and close
- */
+/******************************************************************************/
 int snull_open(struct net_device *dev) {
+/******************************************************************************/
    /* request_region(), request_irq(), ....  (like fops->open) */
    
    /* 
@@ -221,7 +220,9 @@ int snull_open(struct net_device *dev) {
    return 0;
 }
 
+/******************************************************************************/
 int snull_release(struct net_device *dev) {
+/******************************************************************************/
    /* release ports, irq and such -- like fops->close */
    netif_stop_queue(dev); /* can't transmit any more */
    return 0;
@@ -250,10 +251,11 @@ int snull_config(struct net_device *dev, struct ifmap *map) {
    return 0;
 }
 
-/*
- * Receive a packet: retrieve, encapsulate and pass over to upper levels
- */
+/******************************************************************************/
 void snull_rx(struct net_device *dev, struct snull_packet *pkt) {
+/******************************************************************************/
+/* Receive a packet: retrieve, encapsulate and pass over to upper levels
+ */
    struct sk_buff *skb;
    struct snull_priv *priv = netdev_priv(dev);
    
@@ -282,10 +284,11 @@ void snull_rx(struct net_device *dev, struct snull_packet *pkt) {
    return;
 }
 
-/*
- * The poll implementation.
- */
+/******************************************************************************/
 static int snull_poll(struct napi_struct *napi, int budget) {
+/******************************************************************************/
+/* The poll implementation.
+ */
    int npackets = 0;
    struct sk_buff *skb;
    struct snull_priv  *priv = container_of(napi, struct snull_priv, napi);
@@ -322,10 +325,11 @@ static int snull_poll(struct napi_struct *napi, int budget) {
    return npackets;
 }
 
-/*
- * The typical interrupt entry point
- */
+/******************************************************************************/
 static void snull_regular_interrupt(int irq, void *dev_id, struct pt_regs *regs) {
+/******************************************************************************/
+/* The typical interrupt entry point
+ */
    int statusword;
    struct snull_priv *priv;
    struct snull_packet *pkt = NULL;
@@ -369,10 +373,11 @@ static void snull_regular_interrupt(int irq, void *dev_id, struct pt_regs *regs)
    return;
 }
 
-/*
- * A NAPI interrupt handler.
- */
+/******************************************************************************/
 static void snull_napi_interrupt(int irq, void *dev_id, struct pt_regs *regs) {
+/******************************************************************************/
+/* A NAPI interrupt handler.
+ */
    int statusword;
    struct snull_priv *priv;
    
@@ -410,10 +415,11 @@ static void snull_napi_interrupt(int irq, void *dev_id, struct pt_regs *regs) {
    return;
 }
 
-/*
- * Transmit a packet (low level interface)
- */
+/******************************************************************************/
 static void snull_hw_tx(char *buf, int len, struct net_device *dev) {
+/******************************************************************************/
+/* Transmit a packet (low level interface)
+ */
    /*
     * This function deals with hw details. This interface loops
     * back the packet to the other snull interface (if any).
@@ -493,10 +499,11 @@ static void snull_hw_tx(char *buf, int len, struct net_device *dev) {
       snull_interrupt(0, dev, NULL);
 }
 
-/*
- * Transmit a packet (called by the kernel)
- */
+/******************************************************************************/
 int snull_tx(struct sk_buff *skb, struct net_device *dev) {
+/******************************************************************************/
+/* Transmit a packet (called by the kernel)
+ */
    int len;
    char *data, shortpkt[ETH_ZLEN];
    struct snull_priv *priv = netdev_priv(dev);
@@ -536,10 +543,9 @@ void snull_tx_timeout (struct net_device *dev) {
    return;
 }
 
-/*
- * Ioctl commands 
- */
+/******************************************************************************/
 int snull_ioctl(struct net_device *dev, struct ifreq *rq, int cmd) {
+/******************************************************************************/
    PDEBUG("ioctl\n");
    return 0;
 }
@@ -578,7 +584,6 @@ int snull_header(struct sk_buff *skb, struct net_device *dev,
    return (dev->hard_header_len);
 }
 
-
 /*
  * The "change_mtu" method is usually not needed.
  * If you need it, it must be like this.
@@ -606,7 +611,9 @@ static const struct header_ops snull_header_ops = {
    .cache   = NULL,  /* disable caching */
 };
 
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 static const struct net_device_ops snull_netdev_ops = {
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
    .ndo_open = snull_open,
    .ndo_stop = snull_release,
    .ndo_set_config = snull_config,
@@ -617,11 +624,12 @@ static const struct net_device_ops snull_netdev_ops = {
    .ndo_tx_timeout = snull_tx_timeout,
 };
 
-/*
- * The init function (sometimes called probe).
+/******************************************************************************/
+void snull_init(struct net_device *dev) {
+/******************************************************************************/
+/* The init function (sometimes called probe).
  * It is invoked by register_netdev()
  */
-void snull_init(struct net_device *dev) {
    struct snull_priv *priv;
 #if 0
    /*
@@ -660,14 +668,15 @@ void snull_init(struct net_device *dev) {
 /*
  * The devices
  */
-
 struct net_device *snull_devs[2];
 
 /*
  * Finally, the module stuff
  */
 
+/******************************************************************************/
 void snull_cleanup(void) {
+/******************************************************************************/
    int i;
    
    for (i = 0; i < 2;  i++) {
@@ -680,7 +689,9 @@ void snull_cleanup(void) {
    return;
 }
 
+/******************************************************************************/
 int snull_init_module(void) {
+/******************************************************************************/
    int i, rc = 0;
    
    snull_interrupt = use_napi ? snull_napi_interrupt : snull_regular_interrupt;
