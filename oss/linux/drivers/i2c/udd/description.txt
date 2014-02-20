@@ -3,3 +3,6 @@ User space I2C Driver.
 References:
 1. https://www.kernel.org/doc/Documentation/i2c/dev-interface
 
+Notes:
+1. i2c-dev.h is a part of the lm-sensors package.
+
