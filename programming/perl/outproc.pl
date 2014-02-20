@@ -9,9 +9,19 @@ use warnings;
 my ($fname) = @ARGV;
 open my $file, $fname or die "Could not open $fname: $!";
 
+system("clear");
+
+my $n = 0;
+my @words = ();
+
 while(my $line = <$file>)  {   
-   if ($line =~ /sha1/) {
-      print $line;    
+   if ($line =~ /Cycle/) {
+      chomp($line);
+      @words = split(/ /, $line);
+      $n = $words[2];
+   }
+   elsif ($line =~ /sha1/) {
+      print "$n : $line";    
    }
    elsif ($line =~ /Average/) {
       print $line;    
