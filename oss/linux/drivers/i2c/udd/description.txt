@@ -1,2 +1,5 @@
 User space I2C Driver.
 
+References:
+1. https://www.kernel.org/doc/Documentation/i2c/dev-interface
+
