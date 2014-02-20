@@ -14,21 +14,28 @@
 #define I2CADDR 0x4D
 
 int main(int argc, char **argv, char **envp) {
-   int fd;
-   int data;
-   float volts;
-   char buf[10] = {0};
+   int c = 0; /*Return code*/
+   int fd; /*File descriptor*/
+   int data; /*TODO: remove it*/
+   float volts; /*TODO: remove it*/
+   char buf[10] = {0}; /*Data buffer*/
 
+   /* Open the Device. */
    if ((fd = open(I2CDEV, O_RDWR)) < 0) {
       printf("open() failed, errno=%d.", errno);
       exit(1);
    }
-   if (ioctl(fd, I2C_SLAVE,I2CADDR) < 0) {
-      printf("ioctl(I2C_SLAVE) failed, errno=%d\n", errno);
-      close(fd);
-      exit(1);
+   if (ioctl(fd, I2C_PEC, 1) < 0) { /* Enable checksum. */
+      printf("ioctl(I2C_PEC) failed, errno=%d\n", errno);
+      c = errno;
+      goto main_fail_exit;
    }
-   /* Send the reset command.*/
+   if (ioctl(fd, I2C_SLAVE, I2CADDR) < 0) { /* Setup I2C device address. */
+      printf("ioctl(I2C_SLAVE) failed, errno=%d\n", errno);
+      c = errno;
+      goto main_fail_exit;
+   }
+   /* Send the reset command. */
    while(1) {
       buf[0] = 0x8c; //TODO:
       if (write(fd, buf, 1) != 1) {
@@ -47,8 +54,10 @@ int main(int argc, char **argv, char **envp) {
       volts = ((float)data/32767)*2.048;
       printf("data: %d volts: %.4f\n",data, volts);
    }
+  /* Failure handler and exit. */
+main_fail_exit:
    close(fd);
-  return 0;
+   return c;
 }
 
 /* TODO:
