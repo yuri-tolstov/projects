@@ -6,11 +6,14 @@
 use strict;
 use warnings;
 
-my $fname = 'test3.out';
+my ($fname) = @ARGV;
 open my $file, $fname or die "Could not open $fname: $!";
 
 while(my $line = <$file>)  {   
    if ($line =~ /sha1/) {
+      print $line;    
+   }
+   elsif ($line =~ /Average/) {
       print $line;    
    }
 }
