@@ -6,6 +6,8 @@ References:
 
 Notes:
 1. i2c-dev.h is a part of the lm-sensors package.
+Though, for compiling the program, the following packages have to be installed:
+	ls-sensors, i2c-tools, libi2c-dev (contains i2c-dev.h), linux-headers, linux-libc-dev
 
 2. I installed /dev/i2c-N by using:
 # modprobe i2c-dev
