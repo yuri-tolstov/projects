@@ -37,7 +37,8 @@ char *helpdump = ""
 /*---------------------------------------------------------------------------*/
 /* Constants, types, and static/global variables                             */
 /*---------------------------------------------------------------------------*/
-unsigned long g_pktcnt;
+int64_t g_pktcnt;
+int64_t g_totlen;
 
 /*---------------------------------------------------------------------------*/
 /* Command-line options and defaults                                         */
@@ -175,7 +176,7 @@ main_exit:
 /*****************************************************************************/
 void* monitor_thread(void *parm)
 {
-   unsigned long c0, c1, dc; /*Counters*/
+   int64_t c0, c1, dc; /*Counters*/
    struct timespec t0, t1; /*Time*/
    double td; /*Time difference*/
 
@@ -188,10 +189,21 @@ void* monitor_thread(void *parm)
       clock_gettime(CLOCK_REALTIME, &t1);
       
       td = tmdiff(t0, t1);
-      dc = c1 - c0;
-      printf("dt=%1.3f dc=%ld\n", td, dc);
-      c0 = c1;
       t0 = t1;
+
+      if (g_totlen < 0) { /*Take care of overllap*/
+         printf("totlen overlap\n");
+         g_pktcnt = g_totlen = 0;
+         c0 = c1 = 0;
+      }
+      else {
+         dc = c1 - c0;
+         if (g_pktcnt > 0) {
+            printf("dt=%1.3f dc=%ld alen=%ld tlen=%ld npkts=%ld\n",
+                   td, dc, g_totlen / g_pktcnt, g_totlen, g_pktcnt);
+         }
+         c0 = c1;
+      }
       
    }
    return NULL;
@@ -203,7 +215,9 @@ void* monitor_thread(void *parm)
 void gotpkt(u_char *args, const struct pcap_pkthdr *pkth, const u_char *pkt)
 {
    // if ((g_pktcnt % 10000) == 0) printf("count=%d\n", g_pktcnt);
+   // printf("pktlen=%d\n", pkth->len);
    g_pktcnt++;
+   g_totlen += pkth->len;
 }
 
 /*****************************************************************************/
