@@ -31,7 +31,8 @@ char *progid = ""
 char *helpdump = ""
 "Usage: netbm-pcap [options]\n"
 "Options\n"
-"   None.\n"
+"   --dev=ethX          [default=eth1]\n"
+"   --filter=\"<string>\" [default=\"udp\"]\n"
 "";
 
 /*---------------------------------------------------------------------------*/
@@ -43,8 +44,12 @@ int64_t g_totlen;
 /*---------------------------------------------------------------------------*/
 /* Command-line options and defaults                                         */
 /*---------------------------------------------------------------------------*/
+#define FILTERSIZ   256
+
 asm(" .align 4");
 static int verbose = 0;
+static char dev[IFNAMSIZ]; /*Device to sniff on.*/
+static char filter[FILTERSIZ];
 
 /*---------------------------------------------------------------------------*/
 /* Funcgtion prototypes.                                                     */
@@ -94,6 +99,14 @@ int main(int argc, char *argv[])
       if (strncmp(sp,"--verbose=",10) == 0) {
          sp = sp + 10;
          verbose = atoi(sp);
+      /*Device*/
+      } else if (strncmp(sp,"--dev=",6) == 0) {
+         sp = sp + 6;
+         strncpy(dev, sp, IFNAMSIZ);
+      /*Filter Program*/
+      } else if (strncmp(sp,"--filter=",9) == 0) {
+         sp = sp + 9;
+         strncpy(filter, sp, FILTERSIZ);
       /*Help*/
       } else if (strncmp(sp,"--help",6) == 0) {
          printf("%s\n", progid);
@@ -104,8 +117,13 @@ int main(int argc, char *argv[])
          return EXIT_FAILURE;
       }
    }
+   if (dev[0] == 0) strcpy(dev, "eth1");
+   if (filter[0] == 0) strcpy(filter, "udp");
+
    /*Display program information.*/
    printf("%s\n", progid);
+   printf("Device = %s\n", dev);
+   printf("Filter = %s\n", filter);
 
    /*Setup data buffer.*/
    buf = malloc(BUFSIZ);
@@ -115,10 +133,7 @@ int main(int argc, char *argv[])
    /* Open the access to the device.                                          */
    /*-------------------------------------------------------------------------*/
    pcap_t *pccd; /*PCAP session descriptor.*/
-   char *dev = "eth2"; /*Device to sniff on.*/
    char ebuf[PCAP_ERRBUF_SIZE];
-   // char filter[] = "port 5060";
-   char *filter = "udp";
    struct bpf_program fp; /*Compiled filter expression*/
    bpf_u_int32 mask; /*Netmask of the sniffing device*/
    bpf_u_int32 net; /*IP of the sniffing device*/
