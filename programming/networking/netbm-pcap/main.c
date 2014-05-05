@@ -37,7 +37,7 @@ char *helpdump = ""
 /*---------------------------------------------------------------------------*/
 /* Constants, types, and static/global variables                             */
 /*---------------------------------------------------------------------------*/
-#define MAXMSGLEN	0x10000	/*64 KB*/
+unsigned long g_pktcnt;
 
 /*---------------------------------------------------------------------------*/
 /* Command-line options and defaults                                         */
@@ -46,9 +46,11 @@ asm(" .align 4");
 static int verbose = 0;
 
 /*---------------------------------------------------------------------------*/
-/* Callback funciton.                                                        */
+/* Funcgtion prototypes.                                                     */
 /*---------------------------------------------------------------------------*/
+void* monitor_thread(void *parm);
 void gotpkt(u_char *args, const struct pcap_pkthdr *pkth, const u_char *pkt);
+double tmdiff(struct timespec t0, struct timespec t1);
 
 /*---------------------------------------------------------------------------*/
 /* Macros and inline functions                                               */
@@ -112,9 +114,10 @@ int main(int argc, char *argv[])
    /* Open the access to the device.                                          */
    /*-------------------------------------------------------------------------*/
    pcap_t *pccd; /*PCAP session descriptor.*/
-   char *dev = "eth1"; /*Device to sniff on.*/
+   char *dev = "eth2"; /*Device to sniff on.*/
    char ebuf[PCAP_ERRBUF_SIZE];
-   char filter[] = "port 5060";
+   // char filter[] = "port 5060";
+   char *filter = "udp";
    struct bpf_program fp; /*Compiled filter expression*/
    bpf_u_int32 mask; /*Netmask of the sniffing device*/
    bpf_u_int32 net; /*IP of the sniffing device*/
@@ -133,6 +136,12 @@ int main(int argc, char *argv[])
       e = 4;  c = errno;  goto main_exit;
    }
    /*-------------------------------------------------------------------------*/
+   /* Start the Monitor thread.                                               */
+   /*-------------------------------------------------------------------------*/
+   pthread_t tid;
+   pthread_create(&tid, NULL, monitor_thread, NULL);
+
+   /*-------------------------------------------------------------------------*/
    /* Process the packets.                                                    */
    /*-------------------------------------------------------------------------*/
 #if 0
@@ -141,7 +150,7 @@ int main(int argc, char *argv[])
    pkt = pcap_next(pccd, &pkth);
    printf("Jacked a packet with length %d\n", pkth.len);
 #else
-   int npkts = 100;
+   int npkts = 0;
    pcap_loop(pccd, npkts, gotpkt, NULL);
 #endif
 
@@ -161,15 +170,55 @@ main_exit:
    return EXIT_SUCCESS;
 }
 
+/*****************************************************************************/
+/* Thread:   monitor_thread                                                  */
+/*****************************************************************************/
+void* monitor_thread(void *parm)
+{
+   unsigned long c0, c1, dc; /*Counters*/
+   struct timespec t0, t1; /*Time*/
+   double td; /*Time difference*/
+
+   c0 = g_pktcnt;
+   clock_gettime(CLOCK_REALTIME, &t0);
+
+   while (1) {
+      sleep(1);
+      c1 = g_pktcnt;
+      clock_gettime(CLOCK_REALTIME, &t1);
+      
+      td = tmdiff(t0, t1);
+      dc = c1 - c0;
+      printf("dt=%1.3f dc=%ld\n", td, dc);
+      c0 = c1;
+      t0 = t1;
+      
+   }
+   return NULL;
+}
 
 /*****************************************************************************/
 /* Function:   gotpkt                                                        */
 /*****************************************************************************/
 void gotpkt(u_char *args, const struct pcap_pkthdr *pkth, const u_char *pkt)
 {
-   static int count = 1; /* Packet counter */
-	
-   printf("Packet number %d:\n", count);
-   count++;
+   // if ((g_pktcnt % 10000) == 0) printf("count=%d\n", g_pktcnt);
+   g_pktcnt++;
+}
+
+/*****************************************************************************/
+/* Function:   tmdiff                                                        */
+/*****************************************************************************/
+double tmdiff(struct timespec t0, struct timespec t1)
+{
+   struct timespec tt;
+   if ((t1.tv_nsec - t0.tv_nsec) < 0) {
+      tt.tv_sec = t1.tv_sec - t0.tv_sec - 1;
+      tt.tv_nsec = 1000000000 + t1.tv_nsec - t0.tv_nsec;
+   } else {
+      tt.tv_sec = t1.tv_sec - t0.tv_sec;
+      tt.tv_nsec = t1.tv_nsec - t0.tv_nsec;
+   }
+   return (double)tt.tv_sec + (double)tt.tv_nsec / 1000000000;
 }
 
