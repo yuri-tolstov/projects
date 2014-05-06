@@ -32,7 +32,7 @@ char *helpdump = ""
 "Usage: netbm-pcap [options]\n"
 "Options\n"
 "   --dev=ethX          [default=eth1]\n"
-"   --filter=\"<string>\" [default=\"udp\"]\n"
+"   --filter=\"<string>\" [default=\"ip\"]\n"
 "";
 
 /*---------------------------------------------------------------------------*/
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
       }
    }
    if (dev[0] == 0) strcpy(dev, "eth1");
-   if (filter[0] == 0) strcpy(filter, "udp");
+   if (filter[0] == 0) strcpy(filter, "ip");
 
    /*Display program information.*/
    printf("%s\n", progid);
