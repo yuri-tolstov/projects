@@ -191,35 +191,31 @@ main_exit:
 /*****************************************************************************/
 void* monitor_thread(void *parm)
 {
-   int64_t c0, c1, dc; /*Counters*/
+   int64_t n0, n1, dn, l0, l1, dl; /*Counters*/
    struct timespec t0, t1; /*Time*/
    double td; /*Time difference*/
 
-   c0 = g_pktcnt;
+   n0 = g_pktcnt;
+   l0 = g_totlen;
    clock_gettime(CLOCK_REALTIME, &t0);
 
    while (1) {
       sleep(1);
-      c1 = g_pktcnt;
+      n1 = g_pktcnt;
+      l1 = g_totlen;
       clock_gettime(CLOCK_REALTIME, &t1);
       
       td = tmdiff(t0, t1);
-      t0 = t1;
+      dn = n1 - n0;
+      dl = l1 - l0;
 
-      if (g_totlen < 0) { /*Take care of overllap*/
-         printf("totlen overlap\n");
-         g_pktcnt = g_totlen = 0;
-         c0 = c1 = 0;
+      if (dn > 0 && n1 > 0) {
+         printf("dt=%1.3f dn=%ld clen=%ld alen=%ld tlen=%ld tpkts=%ld\n",
+                td, dn, dl / dn, l1 / n1, l1, n1);
       }
-      else {
-         dc = c1 - c0;
-         if (g_pktcnt > 0) {
-            printf("dt=%1.3f dc=%ld alen=%ld tlen=%ld npkts=%ld\n",
-                   td, dc, g_totlen / g_pktcnt, g_totlen, g_pktcnt);
-         }
-         c0 = c1;
-      }
-      
+      t0 = t1;
+      n0 = n1;
+      l0 = l1;
    }
    return NULL;
 }
@@ -231,8 +227,13 @@ void gotpkt(u_char *args, const struct pcap_pkthdr *pkth, const u_char *pkt)
 {
    // if ((g_pktcnt % 10000) == 0) printf("count=%d\n", g_pktcnt);
    // printf("pktlen=%d\n", pkth->len);
-   g_pktcnt++;
    g_totlen += pkth->len;
+   if (g_totlen < 0) { /*Take care of overllap*/
+      g_pktcnt = g_totlen = 0;
+   }
+   else {
+      g_pktcnt++;
+   }
 }
 
 /*****************************************************************************/
