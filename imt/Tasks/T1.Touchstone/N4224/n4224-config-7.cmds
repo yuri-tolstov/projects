@@ -1,0 +1,167 @@
+#=========================================
+# Description of the Configuration for N4224:
+#=========================================
+# NOTES:
+# 1. Here, the rules/filters are given for one pair (P1-P2) only.
+# All other pairs use similar rules.
+#-----------------------------------------
+# Port pairs:
+#-----------------------------------------
+# P1-P2, P3-P4, P5-P6, P9-P10, P11-P12, P13-P14
+#-----------------------------------------
+# Rules for P1--P2 pair.
+#-----------------------------------------
+# P1 => everything => P2
+# P1 => everything => P17
+#
+# P2 => everything => P1
+# P2 => everything => P18
+#
+# The same for P3-P4, P5-P6, P9-P10, P11-P12, P13-P14
+#
+#-----------------------------------------
+# P17 => optical cable => P19	(WI)
+# P18 => optical cable => P20	(WA)
+#
+#-----------------------------------------
+# Rules for P19
+#-----------------------------------------
+# P19 => SIP (UDP d-port = 5060) => P21,P22
+# P19 => RTP (UDP d-port range = 44000-47999) => P21,P22
+#-----------------------------------------
+# Rules for P20
+#-----------------------------------------
+# P20 => SIP (UDP d-port = 5060) => P21,P22
+# P20 => RTP (UDP d-port range = 40000-43999) => P21,P22
+#=========================================
+
+end
+configure terminal
+
+#******************************************
+# Filters
+#******************************************
+# SIP:d-port
+filter-ip access-list template 1500
+permit udp any any eq 5060 priority 20
+exit
+
+# RTP:d-port (WI => WA)
+filter-ip access-list template 1501
+permit udp any any range 44000 47999 priority 20
+exit
+
+# RTP:d-port (WA => WI)
+filter-ip access-list template 1502
+permit udp any any range 40000 43999 priority 20
+exit
+
+#******************************************
+# Configurations
+#******************************************
+# Bypass everything
+#==========================================
+#---------------- W1.X
+# P1 -- P2
+configuration map
+set name P1-to-P2-bypass
+input extreme 0/1 output extreme 0/2,0/17
+exit
+
+configuration map
+set name P2-to-P1-bypass
+input extreme 0/2 output extreme 0/1,0/18
+exit
+
+# P3 -- P4
+configuration map
+set name P3-to-P4-bypass
+input extreme 0/3 output extreme 0/4,0/17
+exit
+
+configuration map
+set name P4-to-P3-bypass
+input extreme 0/4 output extreme 0/3,0/18
+exit
+
+# P5 -- P6
+configuration map
+set name P5-to-P6-bypass
+input extreme 0/5 output extreme 0/6,0/17
+exit
+
+configuration map
+set name P6-to-P5-bypass
+input extreme 0/6 output extreme 0/5,0/18
+exit
+
+#---------------- W2.X
+# P9 -- P10
+configuration map
+set name P9-to-P10-bypass
+input extreme 0/9 output extreme 0/10,0/17
+exit
+
+configuration map
+set name P10-to-P9-bypass
+input extreme 0/10 output extreme 0/9,0/18
+exit
+
+# P11 -- P12
+configuration map
+set name P11-to-P12-bypass
+input extreme 0/11 output extreme 0/12,0/17
+exit
+
+configuration map
+set name P12-to-P11-bypass
+input extreme 0/12 output extreme 0/11,0/18
+exit
+
+# P13 -- P14
+configuration map
+set name P13-to-P14-bypass
+input extreme 0/13 output extreme 0/14,0/17
+exit
+
+configuration map
+set name P14-to-P13-bypass
+input extreme 0/14 output extreme 0/13,0/18
+exit
+
+#==========================================
+# RTP
+#==========================================
+# P19,P20 --> P21
+configuration map
+set name P19-RTP
+input extreme-ethernet 0/19 output extreme-ethernet 0/21,0/22
+filter template ip 1501
+exit
+
+configuration map
+set name P20-RTP
+input extreme-ethernet 0/20 output extreme-ethernet 0/21,0/22
+filter template ip 1502
+exit
+
+#==========================================
+# SIP
+#==========================================
+# P19,P20 --> P21
+configuration map
+set name P19-SIP
+input extreme-ethernet 0/19 output extreme-ethernet 0/21,0/22
+filter template ip 1500
+exit
+
+configuration map
+set name P20-SIP
+input extreme-ethernet 0/20 output extreme-ethernet 0/21,0/22
+filter template ip 1500
+exit
+
+#------------------------------------------
+exit
+# write startup-config
+

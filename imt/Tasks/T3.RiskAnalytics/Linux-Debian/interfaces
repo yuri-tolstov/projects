@@ -1,0 +1,26 @@
+# This file specifies the configuration with:
+# 1) eth0 -- managment port
+# 2) br0  -- connecting eth2 and eth3
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+#iface eth0 inet static
+#       address 10.0.0.2
+#       netmask 255.255.255.0
+#       gateway 10.0.0.1
+
+iface eth2 inet manual
+iface eth3 inet manual
+
+auto br0
+# iface br0 inet dhcp
+#         bridge_ports eth2 eth3
+iface br0 inet static
+        bridge_ports eth2 eth3
+        address 10.65.2.2
+        netmask 255.255.255.0
+        broadcast 10.65.2.255
+        gateway 10.65.2.1
+

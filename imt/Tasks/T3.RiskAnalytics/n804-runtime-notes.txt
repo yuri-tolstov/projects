@@ -1,0 +1,118 @@
+********************************************************************************
+U-Boot environments:
+********************************************************************************
+setenv ethact octeth0
+setenv ipaddr 172.16.0.91
+setenv netmask 255.255.255.0
+setenv gateway 172.16.0.1
+setenv serverip 172.16.0.14
+saveenv
+
+********************************************************************************
+Run Linux (Kernel + initramfs = single image) from TFTP Server
+********************************************************************************
+tftpboot $(loadaddr) vmlinux.64.1
+bootoctlinux $(loadaddr) numcores=16
+
+--------------------------------------------------------------------------------
+setenv ethact octeth0; tftpboot $(loadaddr) vmlinux.64.0; bootoctlinux $(loadaddr) numcores=16
+
+
+********************************************************************************
+	Kernel (vmlinux.64), tftp + Debian Root FS (rootfs.cpio), tftp pre-loaded in Memory
+********************************************************************************
+freeprint
+Block address: 0x0f100020, size: 0x00e3c4e0, next: 0x0fffce40
+Block address: 0x0fffce40, size: 0x00000040, next: 0x0fffd6d0
+Block address: 0x0fffd6d0, size: 0x00000030, next: 0x30000000
+Block address: 0x30000000, size: 0x5f800000, next: 0x00000000
+
+namedalloc myinitrd 27e0000 30000000
+tftpboot 30000000 rootfs.cpio.gz
+This will print the loaded file size (e.g. 27dd6da)
+Use higher value = 27e0000
+tftpboot 20000000 vmlinux.64
+bootoctlinux 20000000 numcores=8 endbootargs rd_name=myinitrd 2
+
+--------------------------------------------------------------------------------
+namedalloc myinitrd 27e0000 30000000; setenv ethact octeth0; tftpboot 30000000 rootfs.cpio.gz; tftpboot 20000000 vmlinux.64; bootoctlinux 20000000 numcores=8 endbootargs rd_name=myinitrd
+
+********************************************************************************
+	Kernel (vmlinux-v2.6-m64), tftp + Debian Root FS, from USB
+********************************************************************************
+usb start
+tftpboot 20000000 vmlinux.64
+bootoctlinux $(loadaddr) numcores=8 rootdelay=5 root=/dev/sda2 rw
+
+--------------------------------------------------------------------------------
+usb start; tftpboot $(loadaddr) vmlinux-2.6-deb; bootoctlinux $(loadaddr) numcores=8 rootdelay=5 root=/dev/sda2 rw
+
+
+********************************************************************************
+	Linux (BusyBox)
+********************************************************************************
+modprobe octeon-ethernet
+ifconfig eth0 172.16.0.91 netmask 255.255.255.0
+ping 172.16.0.1
+
+--------------------------------------------------------------------------------
+modprobe octeon-ethernet; ifconfig eth0 172.16.0.91 netmask 255.255.255.0
+
+
+********************************************************************************
+	Debian + RootFS from USB
+********************************************************************************
+usb start
+usb info
+fatload usb 0:1 $(loadaddr) vmlinux.64
+bootoctlinux $(loadaddr) numcores=8 mem=0 rootdelay=5 root=/dev/sda2 rw
+bootoctlinux $(loadaddr) coremask=3 mem=0 rootdelay=5 root=/dev/sda2 rw
+
+--------------------------------------------------------------------------------
+usb start; fatload usb 0 $(loadaddr) vmlinux.64; bootoctlinux $(loadaddr) numcores=8 rootdelay=10 root=/dev/sda2 rw
+
+********************************************************************************
+	Run Forward SE Application from TFTP Server
+********************************************************************************
+tftpboot $(loadaddr) forward
+bootoct $(loadaddr) numcores=16
+
+--------------------------------------------------------------------------------
+setenv ethact octeth0; tftpboot $(loadaddr) forward; bootoct $(loadaddr) numcores=16
+
+********************************************************************************
+	Linux-Filter Application
+********************************************************************************
+modprobe octeon-ethernet
+modprobe octeon-pow-ethernet receive_group=1 broadcast_groups=4 ptp_rx_group=14 ptp_tx_group=13
+
+insmod ./octeon-ethernet.ko
+insmod ./octeon-pow-ethernet.ko receive_group=1 broadcast_groups=4 ptp_rx_group=14 ptp_tx_group=13
+
+
+********************************************************************************
+	Linux-Forward Application
+********************************************************************************
+modprobe octeon-ethernet
+ifconfig eth2 promisc up
+ifconfig eth3 promisc up
+./filter
+./hbtool set --segment=1 --current-mode=2|4
+
+--------------------------------------------------------------------------------
+usb start; fatload usb 0:1 $(loadaddr) vmlinux.64; bootoctlinux $(loadaddr) numcores=8 rootdelay=5 root=/dev/sda2 rw
+
+usb start; fatload usb 0 $(loadaddr) vmlinux.64; bootoctlinux $(loadaddr) numcores=8 rootdelay=5 root=/dev/sda2 rw
+
+ifconfig eth2 promisc up; ifconfig eth3 promisc up
+
+
+********************************************************************************
+/etc/fstab	# Debian from SDK-3.1.0
+********************************************************************************
+/dev/sda2       /       ext3    defaults,rw,auto  0 0
+none    /proc   proc    defaults 0 0
+none    /sys    sysfs   defaults 0 0
+/dev/sda1       /boot   vfat    defaults 0 0
+
+

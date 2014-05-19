@@ -1,0 +1,68 @@
+********************************************************************************
+	Kernel (vmlinux.64) + Debian Root FS (rootfs.cpio) installed on USB
+********************************************************************************
+tftpboot 0 vmlinux.64
+bootoctlinux 0 numcores=8 mem=0 root=/dev/sda2 rw rootdelay=5 2
+-----------------------------
+tftpboot 0 vmlinux.64; bootoctlinux 0 numcores=2 mem=0 root=/dev/sda2 rw rootdelay=5 2
+tftpboot $(loadaddr) vmlinux.64; bootoctlinux $(loadaddr) numcores=2 mem=0 root=/dev/sda2 rw rootdelay=5 2
+
+********************************************************************************
+	Kernel (vmlinux.64) + Debian Root FS (rootfs.cpio) pre-loaded in Memory
+********************************************************************************
+uboot# freeprint
+Block address: 0x0f100020, size: 0x00e3c4e0, next: 0x0fffce40
+Block address: 0x0fffce40, size: 0x00000040, next: 0x0fffd6d0
+Block address: 0x0fffd6d0, size: 0x00000030, next: 0x30000000
+Block address: 0x30000000, size: 0x5f800000, next: 0x00000000
+
+uboot# namedalloc myinitrd 27e0000 30000000
+uboot# tftpboot 30000000 rootfs.cpio.gz
+This will print the loaded file size (e.g. 27dd6da)
+Use higher value = 27e0000
+uboot# tftpboot 20000000 vmlinux.64
+uboot# bootoctlinux 20000000 numcores=8 endbootargs rd_name=myinitrd 2
+
+********************************************************************************
+	Kernel with Embedded RootFS (one image = vmlinux.64)
+********************************************************************************
+tftpboot 20000000 vmlinux.64.0; bootoctlinux 20000000 numcores=8
+tftpboot $(loadaddr) vmlinux.64.0; bootoctlinux $(loadaddr) numcores=8
+tftpboot 0 vmlinux.64.0; bootoctlinux 0 numcores=8
+
+
+********************************************************************************
+	Disable Services
+********************************************************************************
+root@octeon:/etc# cd /etc/rc2.d/
+root@octeon:/etc/rc2.d# ls
+README       S13portmap     S16rsyslog  S17ntp  S18rc.local   S18stop-bootlogd
+S01bootlogs  S14nfs-common  S17cron     S17ssh  S18rmnologin
+
+# Disable NFS
+root@octeon:/etc/rc2.d# update-rc.d nfs-common disable                                                                                  
+insserv: warning: current start runlevel(s) (empty) of script `nfs-common' overwrites defaults (2 3 4 5 S).
+insserv: warning: current stop runlevel(s) (0 1 2 3 4 5 6 S) of script `nfs-common' overwrites defaults (0 1 6).
+
+# Disable NTP
+update-rc.d: using dependency based boot sequencing
+insserv: warning: current start runlevel(s) (empty) of script `ntp' overwrites defaults (2 3 4 5).
+insserv: warning: current stop runlevel(s) (2 3 4 5) of script `ntp' overwrites defaults (empty).
+
+root@octeon:/etc/rc2.d# ls
+K01ntp         README       S13portmap  S16cron  S17rc.local   S17stop-bootlogd
+K04nfs-common  S01bootlogs  S15rsyslog  S16ssh   S17rmnologin
+root@octeon:/etc/rc2.d# 
+
+********************************************************************************
+	System Info
+********************************************************************************
+root@octeon:/# cat /etc/fstab 
+/dev/sda2       /       ext3    default,rw,auto  0 0
+none    /proc   proc    defaults 0 0
+none    /sys    sysfs   defaults 0 0
+/dev/sda1       /boot   vfat    defaults 0 0
+
+
+
+

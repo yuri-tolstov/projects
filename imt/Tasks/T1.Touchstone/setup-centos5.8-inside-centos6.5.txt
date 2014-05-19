@@ -1,0 +1,44 @@
+# On N1313, connect two disks:
+# 1. With CentOS-6.5 (I use USB drive)
+# 2. With CentOS-5.8 (IQProbe) (I use SATA drive)
+# Boot up with CentoOS-6
+# Verify...
+cat /etc/redhat-release		# Shows: CentOS release 6.5 (Final)
+uname -r			# Shows: 2.6.32-xxxx
+ethtool -i eth1			# Shows: igb, 5.1.2 (this is the latest from Intel)
+
+# OPTIONAL: If necessary, reinstall the IGB driver with new options
+# Add file /etc/modprobe.d/igb.conf
+rmmod igb
+modprobe igb
+service network restart
+
+# Stop SSH service of CentOS-6.5
+service sshd stop
+
+# Mount root partion of the CentOS-5.8 (with IQProbe) disk and...
+# make CentOS-6.5 stuff being visible for CentOS-5.8 User-space programs.
+# NOTE: In my setup it is /dev/dm-2 device. It might be /dev/sdb2,/dev/sda2,...
+C58ROOT=/media/c58
+mkdir -p $C58ROOT
+mount /dev/dm-2 $C58ROOT
+mount --bind /dev $C58ROOT/dev
+mount --bind /dev/pts $C58ROOT/dev/pts
+mount --bind /sys $C58ROOT/sys
+mount --bind /proc $C58ROOT/proc
+
+# Switch to the CentOS-5.8 environment
+chroot /media/c58
+# Verify...
+cat /etc/redhat-release		# Shows: CentOS release 5.8 (Final)
+
+# Start SSH service.
+# NOTE: This would allow the romte access to the CentOS-5.8 environment.
+service sshd start
+
+# Start IQProbe
+# NOTE: This operation can be performed from the remote host.
+service IQProbe start
+
+# From this point, from CentOS-6.5 environment or remotely can start IQProbe monitor (Web Browser)...
+

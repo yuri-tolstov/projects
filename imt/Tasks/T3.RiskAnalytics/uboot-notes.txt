@@ -1,0 +1,24 @@
+
+setenv ipaddr 192.168.1.2
+setenv serverip 192.168.1.3
+setenv bootcmd 'tftpboot $loadaddr vmlinux; bootoctlinux $loadaddr coremask=0x3 ip=192.168.1.2::192.168.1.254:255.255.255.0:edge:eth0:off root=/dev/nfs nfsroot=192.168.1.3:/mnt/erlite-3/,tcp,vers=3
+ 
+================================================================================
+	Updating U-Boot image
+================================================================================
+1. load new file, e.g. through TFTP:
+setenv ipaddr <ip>
+setenv serverip <serverip>
+tftp 0 <u-boot-filename.bin>
+
+2. erase flash
+prot off all
+erase $(flash_base_addr) + $(filesize)
+
+3. copy u-boot into flash
+cp.b $(loadaddr) $(flash_base_addr) $(filesize)
+
+4. Verify (optional)
+cmp.b $(loadaddr) $(flash_base_addr) $(filesize)
+
+

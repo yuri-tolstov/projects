@@ -1,0 +1,13 @@
+1. Login
+root:admin123
+
+2. Setup IP address:
+c t
+i cpu
+ip addr 172.16.0.10 255.255.255.0
+end
+sh ip int
+
+3. Open the browser:
+http://172.16.0.10
+ 
