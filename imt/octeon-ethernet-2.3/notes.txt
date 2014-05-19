@@ -1,0 +1,11 @@
+1. The following files provide:
+a) PHY state machine tracing capabilities using
+   # echo 0|1 > /sys/class/net/ethX/fsmtctl      -- Disable|Enable tracing
+   # cat /sys/class/net/ethX/fsmtrace            -- Show the FSM trace.
+
+b) Fix (?) for link state change (specifically, N804 bypass off) problem reported by Risk Analytics.
+
+The files are part of the OCTEON-SDK-2.3
+
+
+
