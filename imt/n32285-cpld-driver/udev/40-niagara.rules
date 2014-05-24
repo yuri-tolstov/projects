@@ -1,0 +1,1 @@
+KERNEL=="niagara*",MODE="0666"

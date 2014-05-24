@@ -1,0 +1,18 @@
+This is a driver for Niagara 32285 PCIe Card, which performs communication with N511 or
+other boards using I2C interface.
+
+1. Software requirements:
+	- Linux version 2.6.32 or higher
+	- For compilation: installed gnu make,gcc, libc-dev,linux-kernel-headers,awk
+	- For launch: installed udev (to manage device /dev/niagara0 mode and permission)
+	- Ununtu suggested
+
+2. Quick start
+Obtain n32285-cpld-driver-1.0-1.tgz, unpack, compile
+	$ make
+		Expected no error/warning messages, driver modulo and utility will be built
+	$ sudo make install
+		n511reset will be placed in /usr/local/bin
+	$ make insmod
+		Module launched. You can check dmesg or /var/log/kern.log
+
