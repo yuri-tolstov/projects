@@ -1,0 +1,36 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+# N511 reset utility.
+# Depends on the igb and niagara(n32285) modules.
+#-------------------------------------------------------------------------------
+CPLDDIR=/sys/devices/virtual/niagara/niagara0/cpld
+
+if ! [ -d $CPLDDIR ]; then
+   echo "Cannot find $CPLDDIR"
+   exit 1
+fi
+# N511 I2C Device Address
+echo A8 > $CPLDDIR/I2C_DA
+
+# Device's Internal Address of the x86 Control Register
+echo 03 > $CPLDDIR/I2C_ADDR_0
+
+# Data: Reset pulse
+echo 80 > $CPLDDIR/I2C_DATA
+
+# Address width = 7 bits, I2C rate = slowest.
+echo 0F > $CPLDDIR/I2C_CTL
+
+# Operation (write)
+echo 10 > $CPLDDIR/I2C_CSR
+
+# Start transaction
+echo 11 > $CPLDDIR/I2C_CSR
+
+# Check Completion and Error status.
+sleep 1
+CSR=0x$(cat $CPLDDIR/I2C_CSR)
+if test $((CSR & 2)) -ne 0; then
+   STAT=$(cat $CPLDDIR/I2C_STAT)
+   echo "Error: CSR=$CSR STAT=$STAT"
+fi

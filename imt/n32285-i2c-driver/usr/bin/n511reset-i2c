@@ -1,0 +1,21 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+# N511 reset utility.
+# Depends on:
+#    1) igb kernel module;
+#    2) i2c-dev kernel module;
+#    3) niagara(n32285) kernel module.
+#-------------------------------------------------------------------------------
+I2CDEV=$(awk '/i2c_dev/ {print}' /proc/modules)
+if test "$I2CDEV" == ""; then
+   echo "i2c-dev module is not installed"
+   exit 1
+fi
+IMT_I2CDIR=/sys/devices/virtual/niagara/niagara0/i2c/i2c-dev
+if test ! -d $IMT_I2CDIR; then
+   echo "N32285 I2C device (niagara module) is not installed"
+   exit 2
+fi
+IMT_I2CDEV=$(ls $IMT_I2CDIR | awk -F- '{print $2}')
+i2cset -y $IMT_I2CDEV 0x54 0x03 0x80 b
+
