@@ -2,7 +2,7 @@
 INIDIR=$(pwd)
 SDKDIR=$INIDIR/usr/local/Cavium_Networks/OCTEON-SDK
 #-------------------------------------------------------------------------------
-# Verify the environment
+# Verify the environment and the SDK distribution files.
 #-------------------------------------------------------------------------------
 SDKFLIST="OCTEON-SDK-3.1.0-515.i386.rpm
           OCTEON-LINUX-3.1.0-515.i386.rpm
@@ -34,16 +34,16 @@ rm -rf sdk_3.1.0_patch_release2
 #-------------------------------------------------------------------------------
 # Cleanup
 #-------------------------------------------------------------------------------
-source env-setup OCTEON_CN66XX
-make -C bootloader/u-boot distclean
-make -C linux clean
-make -C linux/embedded_rootfs clean
-make -C host/remote-lib clean
-make -C host/remote-utils clean
+# source env-setup OCTEON_CN66XX
+# make -C bootloader/u-boot distclean
+# make -C linux clean
+# make -C linux/embedded_rootfs clean
+# make -C host/remote-lib clean
+# make -C host/remote-utils clean
 
-for dir in $(ls -p examples | grep "/"); do
-   make -C examples/$dir clean
-done
+# for dir in $(ls -p examples | grep "/"); do
+#    make -C examples/$dir clean
+# done
 
 #-------------------------------------------------------------------------------
 # Modify directories and files
@@ -80,6 +80,7 @@ for repo in $REPOLIST; do
    git branch vendor
    git remote add origin file:///$GITBREPOD/octeon-sdk.$repo.git
    git push --all -u
+   git push --tags
 done
 
 FDLIST="diagnostic ejtag examples host licenses simulator target application.mk common-config.mk common.mk env-setup env-setup.pl executive_lib.mk octeon-models.txt README.txt release-notes.txt"
@@ -91,4 +92,5 @@ git tag -a OCTEON-SDK-3.1.0-515-P2 -m "SDK-3.1.0-515 + Patch2 from Cavium"
 git branch vendor
 git remote add origin file:///$GITBREPOD/octeon-sdk.git
 git push --all -u
+git push --tags
 
