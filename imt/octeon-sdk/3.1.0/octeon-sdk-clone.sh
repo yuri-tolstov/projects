@@ -15,11 +15,6 @@ function check_arguments() {
 UCMD=$1
 TGTDIR=$2
 
-read -p "User name: " USER
-read -s -p "User password: " PASS
-
-SREPOURL=https://$USER:$PASS@50.0.45.248/git/unified
-
 case $UCMD in
 #-------------------------------------------------------------------------------
    bootloader)
@@ -67,6 +62,12 @@ Arguments:
       bootloader | executive | linux | docs | full
    target-repo-url:
       Target directory name (e.g. octeon-sdk.bootloader)
+Examples:
+   1. Install Full SDK in OCTEON-SDK directory.
+   $ ./octoen-sdk-clone.sh full OCTEON-SDK
+
+   2. Install Linux SDK in OCTEON-SDK.linux directory.
+   $ ./octoen-sdk-clone.sh linux OCTEON-SDK.linux
 "
 exit 0
 ;;
@@ -77,6 +78,9 @@ esac
 #-------------------------------------------------------------------------------
 if test $CLONESDK -gt 0; then
    check_arguments $TGTDIR
+   read -p "User name: " USER
+   read -s -p "User password: " PASS
+   SREPOURL=https://$USER:$PASS@50.0.45.248/git/unified
    mkdir -p $TGTDIR
    cd $TGTDIR
    git clone $SREPOURL/octeon-sdk.git .
