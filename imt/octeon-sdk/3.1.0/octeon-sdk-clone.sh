@@ -3,10 +3,9 @@
 # Functions
 #*******************************************************************************
 function check_arguments() {
-   local repourl=$1
-   local destdir=$2
+   local destdir=$1
    if test "$destdir" == ""; then
-      echo "Invalid arguments list"
+      echo "Missing destination directory"
       exit 1
    fi
 }
@@ -14,8 +13,12 @@ function check_arguments() {
 # Program
 #*******************************************************************************
 UCMD=$1
-SREPOURL=$2
-TGTDIR=$3
+TGTDIR=$2
+
+read -p "User name: " USER
+read -s -p "User password: " PASS
+
+SREPOURL=https://$USER:$PASS@50.0.45.248/git/unified
 
 case $UCMD in
 #-------------------------------------------------------------------------------
@@ -42,7 +45,7 @@ CLONESDK=2
 #-------------------------------------------------------------------------------
    docs)
 #-------------------------------------------------------------------------------
-check_arguments $SREPOURL $TGTDIR
+check_arguments $TGTDIR
 echo "Cloning OCETON SDK docs set..."
 SMODLIST="docs"
 CLONESDK=3
@@ -58,14 +61,12 @@ CLONESDK=4
    --help | *)
 #-------------------------------------------------------------------------------
 echo "Usage:
-   octeon-sdk-clone.sh <sdk-set> <source-repo-url> <target-dir>
+   octeon-sdk-clone.sh <sdk-set> <target-dir>
 Arguments:
    sdk-set:
       bootloader | executive | linux | docs | full
-   source-repo-url:
-      Git format without repository name at the end
    target-repo-url:
-      Target directory name
+      Target directory name (e.g. octeon-sdk.bootloader)
 "
 exit 0
 ;;
@@ -75,7 +76,7 @@ esac
 # Clone the SDK
 #-------------------------------------------------------------------------------
 if test $CLONESDK -gt 0; then
-   check_arguments $SREPOURL $TGTDIR
+   check_arguments $TGTDIR
    mkdir -p $TGTDIR
    cd $TGTDIR
    git clone $SREPOURL/octeon-sdk.git .
