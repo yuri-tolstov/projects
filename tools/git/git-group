@@ -1,0 +1,78 @@
+#!/bin/bash
+#*******************************************************************************
+# Functions
+#*******************************************************************************
+function show-active-branches() {
+   echo "Active branches:"
+   BRANCH=$(git name-rev HEAD 2> /dev/null | awk '{print $2}')
+   echo "   Superproject = $BRANCH"
+   for smod in $SUBMODS; do
+      cd $ROOTD/$smod
+      BRANCH=$(git name-rev HEAD 2> /dev/null | awk '{print $2}')
+      echo "   Submodule $smod = $BRANCH"
+   done
+}
+
+#*******************************************************************************
+# Program
+#*******************************************************************************
+CMD=$1
+
+ROOTD=$(pwd)
+# if test ! -f .gitmodules; then
+#    echo "There is no .gitmodules file in the current directory"
+#    exit 1
+# fi
+if test ! -d .git; then
+   echo "Command should be executed from the root of Git repository"
+   exit 1
+fi
+# SUBMODS=$(sed -e 's/"//g' -e 's/\[//g' -e 's/\]//g' .gitmodules | awk '/submodule/ {print $2}')
+SUBMODS=$(find .git/modules/ -mindepth 1 -maxdepth 1 -type d | awk -F/ '{print $3}')
+
+case $CMD in
+#===============================================================================
+   branch)
+#===============================================================================
+show-active-branches
+;;
+#===============================================================================
+   switch-branch)
+#===============================================================================
+TGTBRANCH=$2
+for smod in $SUBMODS; do
+   cd $ROOTD/$smod
+   git checkout $TGTBRANCH
+done
+show-active-branches
+;;
+#===============================================================================
+   pull)
+#===============================================================================
+for smod in $SUBMODS; do
+   cd $ROOTD/$smod
+   git pull
+done
+;;
+#===============================================================================
+   status)
+#===============================================================================
+echo "-------------------------------------------------------------------------------"
+echo "Superproject status:"
+echo "-------------------------------------------------------------------------------"
+git status
+for smod in $SUBMODS; do
+   echo "-------------------------------------------------------------------------------"
+   echo "Submodule $smod status:"
+   echo "-------------------------------------------------------------------------------"
+   cd $ROOTD/$smod
+   git status
+done
+;;
+#===============================================================================
+   *)
+#===============================================================================
+   echo "Unknown command"
+;;
+esac
+
