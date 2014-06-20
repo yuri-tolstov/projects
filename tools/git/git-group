@@ -19,16 +19,12 @@ function show-active-branches() {
 CMD=$1
 
 ROOTD=$(pwd)
-# if test ! -f .gitmodules; then
-#    echo "There is no .gitmodules file in the current directory"
-#    exit 1
-# fi
 if test ! -d .git; then
    echo "Command should be executed from the root of Git repository"
    exit 1
 fi
-# SUBMODS=$(sed -e 's/"//g' -e 's/\[//g' -e 's/\]//g' .gitmodules | awk '/submodule/ {print $2}')
-SUBMODS=$(find .git/modules/ -mindepth 1 -maxdepth 1 -type d | awk -F/ '{print $3}')
+
+SUBMODS=$(cat .gitmodules | awk -F\" '/\[submodule.*\]/ { print $2 }')
 
 case $CMD in
 #===============================================================================
