@@ -3,9 +3,9 @@ prompt 1
 timeout 200
 
 label centos5
-   menu label ^1 Touchstone-1.0.0-1:CentOS5 on N1313
+   menu label ^1 Touchstone-1.0.0-1
    kernel centos5/vmlinuz
-   append load initrd=centos5/initrd.img devfs=nomount ks=http://172.16.0.1/touchstone-1.0.0-1.n1313/ks/ks.cfg
+   append load initrd=centos5/initrd.img devfs=nomount ks=http://172.16.0.1/touchstone-1.0.0-1.n1313/ks/ks.cfg ksdevice=eth0 ip=dhcp
 
 label debian7
    menu label ^2 Debian-7
