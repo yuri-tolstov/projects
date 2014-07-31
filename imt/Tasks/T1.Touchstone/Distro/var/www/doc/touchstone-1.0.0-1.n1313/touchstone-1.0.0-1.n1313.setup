@@ -1,0 +1,39 @@
+#!/bin/bash
+RELDIR=$(pwd)
+DISTDIR=$RELDIR/distrib
+LOCK=.installed
+
+case $1 in
+#-------------------------------------------------------------------------------
+   cleanup)
+#-------------------------------------------------------------------------------
+rm -f $LOCK
+sync
+umount $RELDIR/centos5
+if test $? -ne 0; then
+   echo "Failed to unmount $RELDIR"
+fi
+rm -rf centos5 packages ks
+exit 0;
+;;
+#-------------------------------------------------------------------------------
+   *)
+#-------------------------------------------------------------------------------
+;;
+esac
+
+if test -f $LOCK; then
+   echo "Already installed."
+   exit 0;
+fi
+mkdir -p centos5 packages ks
+mount -t iso9660 -o loop $DISTDIR/CentOS-5.10-x86_64-bin-DVD-1of2.iso $RELDIR/centos5 > /dev/zero
+if test $? -eq 0; then
+   echo "CentOS ISO is mounted in $RELDIR/centos5"
+else
+   echo "Failed to mount CentOS ISO"
+   exit 2
+fi
+cp $DISTDIR/ks.cfg ks
+touch $LOCK
+echo "Done."

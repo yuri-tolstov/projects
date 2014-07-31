@@ -1,0 +1,14 @@
+default vesamenu.c32
+prompt 1
+timeout 200
+
+label centos5
+   menu label ^1 Touchstone-1.0.0-1:CentOS5 on N1313
+   kernel centos5/vmlinuz
+   append load initrd=centos5/initrd.img devfs=nomount ks=http://172.16.0.1/touchstone-1.0.0-1.n1313/ks/ks.cfg
+
+label debian7
+   menu label ^2 Debian-7
+   kernel debian-installer/amd64/linux
+   append vga=788 initrd=debian-installer/amd64/initrd.gz -- quiet
+
