@@ -13,7 +13,7 @@ umount $RELDIR/centos5
 if test $? -ne 0; then
    echo "Failed to unmount $RELDIR"
 fi
-rm -rf centos5 packages ks
+rm -rf centos5 packages config ks
 exit 0;
 ;;
 #-------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ if test -f $LOCK; then
    echo "Already installed."
    exit 0;
 fi
-mkdir -p centos5 packages ks
+mkdir -p centos5 packages config ks
 mount -t iso9660 -o loop $DISTDIR/CentOS-5.10-x86_64-bin-DVD-1of2.iso $RELDIR/centos5 > /dev/zero
 if test $? -eq 0; then
    echo "CentOS ISO is mounted in $RELDIR/centos5"
