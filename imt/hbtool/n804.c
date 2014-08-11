@@ -83,18 +83,18 @@ int n804_avr_kick_heartbeat(int seg)
 
 int n804_timeout_get(int seg)
 {
-    static uint8_t seg_regs[] = {0x0, 0x1};
-    uint8_t m = n804_avr_read(seg_regs[seg - 1]);
+    static uint8_t regs[] = {0x0, 0x1};
+    uint8_t m = n804_avr_read(regs[seg - 1]);
     printf("Heartbeat timeout [%d]: %d msec\n", seg, (int) m * 100);
     return 0;
 }
 
 int n804_timeout_set(int seg, char *v)
 {
-    static uint8_t seg_regs[] = {0x0, 0x1};
+    static uint8_t regs[] = {0x0, 0x1};
     int i = atoi(v); i /= 100;
     if (i <= 0xff) {
-        n804_avr_write(seg_regs[seg - 1], (uint8_t)i);
+        n804_avr_write(regs[seg - 1], (uint8_t)i);
         return 0;
     }
     return -1;
@@ -136,18 +136,18 @@ int n804_startup_wait_ovr_set(int seg, char *v)
 
 int n804_default_mode_get(int seg)
 {
-    static uint8_t seg_regs[] = {0x32, 0x38};
-    uint8_t m = n804_avr_read(seg_regs[seg - 1]);
+    static uint8_t regs[] = {0x32, 0x38};
+    uint8_t m = n804_avr_read(regs[seg - 1]);
     printf("Default mode [%d]: %d\n", seg, (int) m);
     return 0;
 }
 
 int n804_default_mode_set(int seg, char *v)
 {
-    static uint8_t seg_regs[] = {0x32, 0x38};
+    static uint8_t regs[] = {0x32, 0x38};
     uint8_t i = atoi(v);
     if (i < 6) {
-        n804_avr_write(seg_regs[seg - 1], i);
+        n804_avr_write(regs[seg - 1], i);
         return 0;
     }
     return -1;
@@ -155,18 +155,18 @@ int n804_default_mode_set(int seg, char *v)
 
 int n804_poweroff_mode_get(int seg)
 {
-    static uint8_t seg_regs[] = {0x33, 0x39};
-    uint8_t m = n804_avr_read(seg_regs[seg - 1]);
+    static uint8_t regs[] = {0x33, 0x39};
+    uint8_t m = n804_avr_read(regs[seg - 1]);
     printf("Power Off mode [%d]: %s\n", seg, (m)?"Bypass":"No Link");
     return 0;
 }
 
 int n804_poweroff_mode_set(int seg, char *v)
 {
-    static uint8_t seg_regs[] = {0x33, 0x39};
+    static uint8_t regs[] = {0x33, 0x39};
     uint8_t i = atoi(v);
     if (i < 2) {
-        n804_avr_write(seg_regs[seg - 1], i);
+        n804_avr_write(regs[seg - 1], i);
         return 0;
     }
     return -1;
@@ -174,18 +174,18 @@ int n804_poweroff_mode_set(int seg, char *v)
 
 int n804_current_mode_get(int seg)
 {
-    static uint8_t seg_regs[] = {0x31, 0x37};
-    uint8_t m = n804_avr_read(seg_regs[seg - 1]);
+    static uint8_t regs[] = {0x31, 0x37};
+    uint8_t m = n804_avr_read(regs[seg - 1]);
     printf("Current mode [%d]: %d\n", seg, (int) m);
     return 0;
 }
 
 int n804_current_mode_set(int seg, char *v)
 {
-    static uint8_t seg_regs[] = {0x31, 0x37};
+    static uint8_t regs[] = {0x31, 0x37};
     uint8_t i = atoi(v);
     if (i < 6) {
-        n804_avr_write(seg_regs[seg - 1], i);
+        n804_avr_write(regs[seg - 1], i);
         return 0;
     }
     return -1;
@@ -193,10 +193,10 @@ int n804_current_mode_set(int seg, char *v)
 
 int n804_status_get(int seg)
 {
-    static uint8_t seg_regs[] = {0x2f, 0x35};
+    static uint8_t regs[] = {0x2f, 0x35};
     static char *status[] = {"BYPASS", "INLINE", "NO LINK"};
 
-    uint8_t s = n804_avr_read(seg_regs[seg - 1]);
+    uint8_t s = n804_avr_read(regs[seg - 1]);
     printf("Status [%d]: %s\n", seg, status[s - 1]);
     return 0;
 }
