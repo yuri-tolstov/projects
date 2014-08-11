@@ -20,25 +20,30 @@
 /* N804 Definitions                                                           */
 /******************************************************************************/
 #define N804_SEG_NUM 2
+#define N804_MDIO_BUS 0
+#define N804_PHY 0x10
 
 /******************************************************************************/
 /* CPLD Definitions                                                           */
 /******************************************************************************/
+#define N804_CPLD_SIG_L  0x0
+#define N804_CPLD_SIG_H  0x1
+#define N804_CPLD_REV    0x2
+/*AVR Intarface*/
+#define N804_AVR_ADDR    0x10
+#define N804_AVR_DOUT    0x11
+#define N804_AVR_DIN     0x12
+#define N804_AVR_CSR     0x17
+#define N804_AVR_CSR_OP_REQ     (1 << 3)
+#define N804_AVR_CSR_DIR_IN     (0 << 2)
+#define N804_AVR_CSR_DIR_OUT    (1 << 2)
+#define N804_AVR_CSR_KICK_A     (1 << 4)
+#define N804_AVR_CSR_KICK_B     (1 << 5)
 
 /******************************************************************************/
 /* AVR Definitions                                                            */
 /******************************************************************************/
-#define N804_MDIO_BUS 0
-#define N804_PHY 0x10
-#define N804_AVR_ADDR 0x10
-#define N804_AVR_CSR 0x17
-#define N804_AVR_DIN 0x12
-#define N804_AVR_DOUT 0x11
-#define N804_AVR_CSR_OP_REQ (1 << 3)
-#define N804_AVR_CSR_DIR_IN (0 << 2)
-#define N804_AVR_CSR_DIR_OUT (1 << 2)
-#define N804_AVR_CSR_KICK_A (1 << 4)
-#define N804_AVR_CSR_KICK_B (1 << 5)
+/*The AVR Register addresses are used directly in the Interface functions below.*/
 
 /******************************************************************************/
 /* AVR access Functions                                                        */
@@ -66,7 +71,9 @@ void n804_avr_write(uint8_t avr_reg, uint8_t data)
         usleep(100);
 }
 
-static
+/******************************************************************************/
+/* Niagara Interface Functions                                                */
+/******************************************************************************/
 int n804_avr_kick_heartbeat(int seg)
 {
     static uint8_t seg_kicks[] = {N804_AVR_CSR_KICK_A | N804_AVR_CSR_KICK_B, N804_AVR_CSR_KICK_A, N804_AVR_CSR_KICK_B};
@@ -74,9 +81,6 @@ int n804_avr_kick_heartbeat(int seg)
     return 0;
 }
 
-/******************************************************************************/
-/* Niagara Interface Functions                                                */
-/******************************************************************************/
 int n804_timeout_get(int seg)
 {
     static uint8_t seg_regs[] = {0x0, 0x1};
@@ -237,7 +241,7 @@ int n804_probe(void)
  * Note, the save value can be found in CPLD ID register (address = 0).
  */
 {
-    /*Enable access to the AVR*/
+    /*Enable access to the MDIO bus.*/
     cvmx_write_csr(CVMX_SMIX_EN(N804_MDIO_BUS), 0x1);
 
     /*Retrieve the Product ID value.*/
