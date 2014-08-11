@@ -61,10 +61,33 @@ enum {
 /*----------------------------------------------------------------------------*/
 /* "AVR Firmware, Dual Ported", Rev 0.4, Aug 01, 2014                         */
 /******************************************************************************/
+/*Misc Parameters*/
+#define N808_AVR_FIRMWARE_REV          0x00
+#define N808_AVR_SEC_FIRMWARE_REV      0x01
 #define N808_AVR_PRODUCT_ID_L          0x02
 #define N808_AVR_PRODUCT_ID_H          0x03
 #define N808_AVR_PRODUCT_REV           0x04
+#define N808_AVR_PRGM_TEST             0x13
+#define N808_AVR_TEST_MODE             0x14
+#define N808_AVR_FIBER_EN              0x15
+#define N808_AVR_CURRENT_FIBER_EN      0x16
+#define N808_AVR_CURRENT_F_TEMP        0x17
+#define N808_AVR_PASSWORD_ENTER        0x17
+#define N808_AVR_ERR_STAT_1            0x20
+#define N808_AVR_ERR_STAT_2            0x21
 
+/*AVR EEPROM Based Parameters*/
+#define N808_AVR_ST_UP_DLY             0x23
+#define N808_AVR_ST_UP_DLY_OVR         0x24
+#define N808_AVR_MAX_TM_ERR            0x25
+#define N808_AVR_I2C_CTL               0x29
+#define N808_AVR_TEMP_CTL              0x2A
+#define N808_AVR_TEMP_SDWN_CNT         0x2B
+#define N808_AVR_ALERT_LIMIT           0x2C
+#define N808_AVR_OVERT_LIMIT           0x2D
+#define N808_AVR_PSSWD_E2PROM_BADDR    0x30 
+
+/*Channel Specific Parameters*/
 #define N808_AVR_HEART_BEAT_TIMEOUT_A  0x40
 #define N808_AVR_COPPER_DEFAULT_MD_A   0x41
 #define N808_AVR_FIBER_DEFAULT_MD_A    0x42
@@ -155,132 +178,110 @@ int n808_avr_kick_heartbeat(int seg)
 
 int n808_timeout_get(int seg)
 {
-#if 0
-    static uint8_t seg_regs[] = {0x0, 0x1};
-    uint8_t m = n808_avr_read(seg_regs[seg - 1]);
+    static uint8_t regs[] = {N808_AVR_HEART_BEAT_TIMEOUT_A, N808_AVR_HEART_BEAT_TIMEOUT_B};
+    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]);
     printf("Heartbeat timeout [%d]: %d msec\n", seg, (int) m * 100);
-#endif
     return 0;
 }
 
 int n808_timeout_set(int seg, char *v)
 {
-#if 0
-    static uint8_t seg_regs[] = {0x0, 0x1};
+    static uint8_t regs[] = {N808_AVR_HEART_BEAT_TIMEOUT_A, N808_AVR_HEART_BEAT_TIMEOUT_B};
     int i = atoi(v); i /= 100;
     if (i <= 0xff) {
-        n808_avr_write(seg_regs[seg - 1], (uint8_t)i);
+        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], (uint8_t)i);
         return 0;
     }
-#endif
     return -1;
 }
 
 int n808_startup_wait_get(int seg)
 {
-#if 0
-    uint8_t m = n808_avr_read(0x4);
+    uint8_t m = n808_avr_read(N808_AVR_PORT_1, N808_AVR_ST_UP_DLY);
     printf("Start up wait: %d sec\n", (int) m * 2);
-#endif
     return 0;
 }
 
 int n808_startup_wait_set(int seg, char *v)
 {
-#if 0
     int i = atoi(v); i /= 2;
     if (i <= 0xff) {
-        n808_avr_write(0x4, (uint8_t)i);
+        n808_avr_write(N808_AVR_PORT_1, N808_AVR_ST_UP_DLY, (uint8_t)i);
         return 0;
     }
-#endif
     return -1;
 }
 
 int n808_startup_wait_ovr_get(int seg)
 {
-#if 0
-    uint8_t m = n808_avr_read(0x5);
+    uint8_t m = n808_avr_read(N808_AVR_PORT_1, N808_AVR_ST_UP_DLY_OVR);
     printf("Start up wait override: %d\n", m);
-#endif
     return 0;
 }
 
 int n808_startup_wait_ovr_set(int seg, char *v)
 {
-#if 0
     uint8_t i = atoi(v);
     if (i < 2) {
-        n808_avr_write(0x5, i);
+        n808_avr_write(N808_AVR_PORT_1, N808_AVR_ST_UP_DLY_OVR, (uint8_t)i);
         return 0;
     }
-#endif
     return -1;
 }
 
 int n808_default_mode_get(int seg)
 {
-#if 0
-    static uint8_t seg_regs[] = {0x32, 0x38};
-    uint8_t m = n808_avr_read(seg_regs[seg - 1]);
+    static uint8_t regs[] = {N808_AVR_COPPER_DEFAULT_MD_A, N808_AVR_COPPER_DEFAULT_MD_B};
+    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]);
     printf("Default mode [%d]: %d\n", seg, (int) m);
-#endif
     return 0;
 }
 
 int n808_default_mode_set(int seg, char *v)
 {
-#if 0
-    static uint8_t seg_regs[] = {0x32, 0x38};
+    static uint8_t regs[] = {N808_AVR_COPPER_DEFAULT_MD_A, N808_AVR_COPPER_DEFAULT_MD_B};
     uint8_t i = atoi(v);
     if (i < 6) {
-        n808_avr_write(seg_regs[seg - 1], i);
+        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], i);
         return 0;
     }
-#endif
     return -1;
 }
 
 int n808_poweroff_mode_get(int seg)
 {
-#if 0
-    static uint8_t seg_regs[] = {0x33, 0x39};
-    uint8_t m = n808_avr_read(seg_regs[seg - 1]);
+    static uint8_t regs[] = {N808_AVR_PWR_OFF_MD_A, N808_AVR_PWR_OFF_MD_B};
+    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]);
     printf("Power Off mode [%d]: %s\n", seg, (m)?"Bypass":"No Link");
-#endif
     return 0;
 }
 
 int n808_poweroff_mode_set(int seg, char *v)
 {
-#if 0
-    static uint8_t seg_regs[] = {0x33, 0x39};
+    static uint8_t regs[] = {N808_AVR_PWR_OFF_MD_A, N808_AVR_PWR_OFF_MD_B};
     uint8_t i = atoi(v);
     if (i < 2) {
-        n808_avr_write(seg_regs[seg - 1], i);
+        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], i);
         return 0;
     }
-#endif
     return -1;
 }
 
 int n808_current_mode_get(int seg)
 {
-#if 0
-    static uint8_t seg_regs[] = {0x31, 0x37};
-    uint8_t m = n808_avr_read(seg_regs[seg - 1]);
-    printf("Current mode [%d]: %d\n", seg, (int) m);
-#endif
+    static uint8_t regs[] = {N808_AVR_CURRENT_MODE_A, N808_AVR_CURRENT_MODE_B};
+    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]); //TODO: Port 1 or 2?
+    printf("Current mode [%d]: %d\n", seg, (int)m);
     return 0;
 }
 
 int n808_current_mode_set(int seg, char *v)
 {
-    static uint8_t seg_regs[] = {N808_AVR_CURRENT_MODE_A, N808_AVR_CURRENT_MODE_B};
+    static uint8_t regs[] = {N808_AVR_CURRENT_MODE_A, N808_AVR_CURRENT_MODE_B};
     uint8_t i = atoi(v);
 
     if (i < 6) {
-        n808_avr_write(N808_AVR_PORT_1, seg_regs[seg - 1], i); //TODO: Port 1 or 2?
+        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], i); //TODO: Port 1 or 2?
         return 0;
     }
     return -1;
@@ -288,56 +289,47 @@ int n808_current_mode_set(int seg, char *v)
 
 int n808_status_get(int seg)
 {
-#if 0
-    static uint8_t seg_regs[] = {0x2f, 0x35};
+    static uint8_t regs[] = {N808_AVR_RLY_STATUS_A, N808_AVR_RLY_STATUS_B};
     static char *status[] = {"BYPASS", "INLINE", "NO LINK"};
 
-    uint8_t s = n808_avr_read(seg_regs[seg - 1]);
-    printf("Status [%d]: %s\n", seg, status[s - 1]);
-#endif
+    uint8_t v = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]); //Port 1 or 2?
+    printf("Status [%d]: %s\n", seg, status[v - 1]);
     return 0;
 }
 
 int n808_oem_id_get(int seg)
 {
-#if 0
-    uint8_t s = n808_avr_read(0x41);
-    printf("OEM Id: %d\n", s);
-#endif
+    /*N808 doesn't have such register.*/
     return 0;
 }
 
 int n808_product_rev_get(int seg)
 {
-#if 0
-    uint8_t s = n808_avr_read(0x43);
-    printf("Product revision: %d\n", s);
-#endif
+    uint8_t v = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_REV); //TODO: Port 1 or 2?
+    printf("Product revision: %d\n", v);
     return 0;
 }
 
 int n808_product_id_get(int seg)
 {
-#if 0
-    uint8_t s = n808_avr_read(0x42);
-    printf("Product Id: %d\n", s);
-#endif
-    return 0;
+    uint8_t lo = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_L); //TODO: Port 1 or 2?
+    uint8_t hi = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_H); //TODO: Port 1 or 2?
+    int id = hi << 8 | lo;
+    printf("Product ID: %x\n", id);
+    return id;
 }
 
 int n808_fw_rev_get(int seg)
 {
-#if 0
-    uint8_t s = n808_avr_read(0x44);
-    uint8_t ss = n808_avr_read(0x45);
-    printf("Firmware revision: %d.%d\n", s, ss);
-#endif
+    uint8_t v = n808_avr_read(N808_AVR_PORT_1, N808_AVR_FIRMWARE_REV);
+    uint8_t vv = n808_avr_read(N808_AVR_PORT_1, N808_AVR_SEC_FIRMWARE_REV);
+    printf("Firmware revision: %d.%d\n", v, vv);
     return 0;
 }
 
 int n808_numseg_get(void)
 {
-    return 0; //TODO
+    return N808_SEG_NUM;
 }
 
 int n808_probe(void)
@@ -350,13 +342,10 @@ int n808_probe(void)
     cvmx_write_csr(CVMX_SMIX_EN(N808_MDIO_BUS), 0x1);
 
     /*Retrieve the Product ID value.*/
-    uint8_t lo = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_L); //TODO: Port1 or 2?
-    uint8_t hi = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_H);
-    printf("Product Id: %x_%x\n", hi, lo); //TODO:debug
-   //TODO:
-   // 1. What value should I expect?
-   // 2. 8- or 16-bits?
-
+    int id = n808_product_id_get(0);
+    if (id != 0x55) { //TODO: What code to expect here?
+        return IMTHW_UNDEF;
+    }
     return IMTHW_N808;
 }
 
