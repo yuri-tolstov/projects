@@ -31,9 +31,10 @@ inline uint64_t cvmx_get_cycle(void) {
 /******************************************************************************/
 static niagara_ops_t hwop; /*Niagara Interface object.*/
 
+/* NOTE: Keep the order of the hardware modules the same as in IMTHW_xxx list (niagara.h).*/
 static niagara_hwini_t hwini[IMTHW_MAX] = { /*Niagara INIT functions object.*/
-   {.init = n804_init}, /*N804*/
    {.init = n808_init}, /*N808*/
+   {.init = n804_init}, /*N804*/
 };
 
 /*Interface Wrappers.*/

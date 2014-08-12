@@ -10,11 +10,22 @@
 /******************************************************************************/
 /* Hardware Modules                                                           */
 /******************************************************************************/
+/* NOTE: The list is based on the hardware modules age,
+ * the youngest -- on the top of the list.*/
 enum {
-   IMTHW_N804,
    IMTHW_N808,
+   IMTHW_N804,
    IMTHW_MAX,
    IMTHW_UNDEF = -1
+};
+
+/*Bypass segments.*/
+enum {
+   N808_SEG_1,
+   N808_SEG_2,
+   N808_SEG_3,
+   N808_SEG_4,
+   N808_SEG_MAX
 };
 
 /******************************************************************************/
@@ -55,8 +66,8 @@ int n808_init(niagara_ops_t *ops);
 /* Usage.                                                                     */
 /******************************************************************************/
 niagara_hwini_t ifn[IMTHW_MAX] = {
-   {.init = n804_init},
    {.init = n808_init},
+   {.init = n804_init},
 };
 niagara_ops_t hwm[IMTHW_MAX];
 int hwi;

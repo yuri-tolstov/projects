@@ -19,9 +19,15 @@
 /******************************************************************************/
 /* N804 Definitions                                                           */
 /******************************************************************************/
-#define N804_SEG_NUM 2
 #define N804_MDIO_BUS 0
 #define N804_PHY 0x10
+
+/*Bypass segments.*/
+#define N804_NUMSEGS 2
+
+/*Board signature (contained in CPLD_SIG_x registers)*/
+#define N804_SIGN_L  0x60
+#define N804_SIGN_H  0x00
 
 /******************************************************************************/
 /* CPLD Definitions                                                           */
@@ -44,6 +50,19 @@
 /* AVR Definitions                                                            */
 /******************************************************************************/
 /*The AVR Register addresses are used directly in the Interface functions below.*/
+
+/******************************************************************************/
+/* CPLD access Functions                                                      */
+/******************************************************************************/
+static inline
+uint8_t n804_cpld_read(uint8_t reg) {
+    return (uint8_t)cvmx_mdio_read(N804_MDIO_BUS, N804_PHY, reg);
+}
+
+static inline
+void n804_cpld_write(uint8_t reg, uint8_t data) {
+    cvmx_mdio_write(N804_MDIO_BUS, N804_PHY, reg, data);
+}
 
 /******************************************************************************/
 /* AVR access Functions                                                        */
@@ -232,7 +251,7 @@ int n804_fw_rev_get(int seg)
 
 int n804_numseg_get(void)
 {
-    return N804_SEG_NUM;
+    return N804_NUMSEGS;
 }
 
 int n804_probe(void)
@@ -244,13 +263,11 @@ int n804_probe(void)
     /*Enable access to the MDIO bus.*/
     cvmx_write_csr(CVMX_SMIX_EN(N804_MDIO_BUS), 0x1);
 
-    /*Retrieve the Product ID value.*/
-    uint8_t s = n804_avr_read(0x42);
-    printf("Product Id: %d\n", s); //TODO:debug
-   //TODO:
-   // 1. What value should I expect?
-   // 2. 8- or 16-bits?
-
+    /*Retrieve and analyze the Product ID.*/
+    uint8_t id = n804_cpld_read(N804_CPLD_SIG_L);
+    if (id != N804_SIGN_L) {
+        return IMTHW_UNDEF;
+    }
     return IMTHW_N804;
 }
 

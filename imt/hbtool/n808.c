@@ -20,14 +20,14 @@
 /* N808 Definitions                                                           */
 /******************************************************************************/
 #define N808_MDIO_BUS 0
-#define N808_PHY 0x10
+#define N808_CPLD_ADDR 0x10
 
 /*Bypass segments.*/
-#define N808_SEG_NUM 2
-enum {
-   N808_SEG_1,
-   N808_SEG_2,
-};
+#define N808_NUMSEGS 2
+
+/*Board signature (contained in CPLD_SIG_x registers)*/
+#define N808_SIGN_L  0xAE
+#define N808_SIGN_H  0x00
 
 /******************************************************************************/
 /* CPLD Definitions                                                           */
@@ -133,12 +133,12 @@ static uint8_t segwdi[] = {N808_CSR_WDI_A | N808_CSR_WDI_B, N808_CSR_WDI_A, N808
 /******************************************************************************/
 static inline
 uint8_t n808_cpld_read(uint8_t reg) {
-    return (uint8_t)cvmx_mdio_read(N808_MDIO_BUS, N808_PHY, reg);
+    return (uint8_t)cvmx_mdio_read(N808_MDIO_BUS, N808_CPLD_ADDR, reg);
 }
 
 static inline
 void n808_cpld_write(uint8_t reg, uint8_t data) {
-    cvmx_mdio_write(N808_MDIO_BUS, N808_PHY, reg, data);
+    cvmx_mdio_write(N808_MDIO_BUS, N808_CPLD_ADDR, reg, data);
 }
 
 /******************************************************************************/
@@ -172,7 +172,7 @@ void n808_avr_write(int port, uint8_t reg, uint8_t data)
 /******************************************************************************/
 int n808_avr_kick_heartbeat(int seg)
 {
-    n808_cpld_write(avrcsr[0], segwdi[seg]); //TODO: Port 1 or Port 2
+    n808_cpld_write(avrcsr[N808_AVR_PORT_1], segwdi[seg]);
     return 0;
 }
 
@@ -270,7 +270,7 @@ int n808_poweroff_mode_set(int seg, char *v)
 int n808_current_mode_get(int seg)
 {
     static uint8_t regs[] = {N808_AVR_CURRENT_MODE_A, N808_AVR_CURRENT_MODE_B};
-    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]); //TODO: Port 1 or 2?
+    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]);
     printf("Current mode [%d]: %d\n", seg, (int)m);
     return 0;
 }
@@ -281,7 +281,7 @@ int n808_current_mode_set(int seg, char *v)
     uint8_t i = atoi(v);
 
     if (i < 6) {
-        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], i); //TODO: Port 1 or 2?
+        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], i);
         return 0;
     }
     return -1;
@@ -305,15 +305,15 @@ int n808_oem_id_get(int seg)
 
 int n808_product_rev_get(int seg)
 {
-    uint8_t v = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_REV); //TODO: Port 1 or 2?
+    uint8_t v = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_REV);
     printf("Product revision: %d\n", v);
     return 0;
 }
 
 int n808_product_id_get(int seg)
 {
-    uint8_t lo = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_L); //TODO: Port 1 or 2?
-    uint8_t hi = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_H); //TODO: Port 1 or 2?
+    uint8_t lo = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_L);
+    uint8_t hi = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_H);
     int id = hi << 8 | lo;
     printf("Product ID: %x\n", id);
     return id;
@@ -329,7 +329,7 @@ int n808_fw_rev_get(int seg)
 
 int n808_numseg_get(void)
 {
-    return N808_SEG_NUM;
+    return N808_NUMSEGS;
 }
 
 int n808_probe(void)
@@ -341,9 +341,9 @@ int n808_probe(void)
     /*Enable access to the MDIO bus.*/
     cvmx_write_csr(CVMX_SMIX_EN(N808_MDIO_BUS), 0x1);
 
-    /*Retrieve the Product ID value.*/
-    int id = n808_product_id_get(0);
-    if (id != 0x55) { //TODO: What code to expect here?
+    /*Retrieve and analyze the Product ID.*/
+    uint8_t id = n808_cpld_read(N808_CPLD_SIG_L);
+    if (id != N808_SIGN_L) {
         return IMTHW_UNDEF;
     }
     return IMTHW_N808;
