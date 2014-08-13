@@ -31,30 +31,36 @@
 
 /******************************************************************************/
 /* CPLD Definitions                                                           */
+/* "Niagara N808 CPLD", Rev 0.1, May 22, 2014                                 */
 /******************************************************************************/
-#define N808_CPLD_SIG_L  0x0
-#define N808_CPLD_SIG_H  0x1
-#define N808_CPLD_REV    0x2
+#define N808_CPLD_SIG_L   0x0
+#define N808_CPLD_SIG_H   0x1
+#define N808_CPLD_REV     0x2
+#define N808_CPLD_TEST_R  0x13
 /*AVR Interface, Port 1*/
-#define N808_CSR_1       0x48
-#define N808_ADDR_1      0x49
-#define N808_DAT_1       0x4A
-#define N808_SYS_CSR     0x4E
-#define N808_SI_CTL      0x4F
+#define N808_CPLD_CSR_1   0x48
+#define N808_CPLD_ADDR_1  0x49
+#define N808_CPLD_DAT_1   0x4A
+#define N808_CPLD_SYS_CSR 0x4E
+#define N808_CPLD_SI_CTL  0x4F
 /*AVR Interface, Port 2*/
-#define N808_CSR_2       0x50
-#define N808_ADDR_2      0x51
-#define N808_DAT_2       0x52
-#define N808_RLY_CTL     0x54
-#define N808_FBR_CTL     0x56
+#define N808_CPLD_CSR_2   0x50
+#define N808_CPLD_ADDR_2  0x51
+#define N808_CPLD_DAT_2   0x52
+#define N808_CPLD_RLY_CTL 0x54
+#define N808_CPLD_FBR_CTL 0x56
 
+/*----------------------------------------------------------------------------*/
 /*CSR[X] Register bits*/
-#define N808_CSR_OP_REQ  (1 << 0)
-#define N808_CSR_DIR_IN  (0 << 1)
-#define N808_CSR_DIR_OUT (1 << 1)
-#define N808_CSR_ERR     (1 << 3)
-#define N808_CSR_WDI_A   (1 << 4)
-#define N808_CSR_WDI_B   (1 << 5)
+#define N808_CSR_OP_REQ      (1 << 0)
+#define N808_CSR_DIR_IN      (0 << 1)
+#define N808_CSR_DIR_OUT     (1 << 1)
+#define N808_CSR_ERR         (1 << 3)
+#define N808_CSR_WDI_A       (1 << 4)
+#define N808_CSR_WDI_B       (1 << 5)
+
+/*TEST_R Register bits*/
+#define N808_TEST_R_AVR_RCS  (1 << 2)
 
 /******************************************************************************/
 /* AVR Definitions                                                            */
@@ -122,9 +128,9 @@ enum {
    N808_AVR_PORT_2,
 };
 
-static uint8_t avraddr[] = {N808_ADDR_1, N808_ADDR_2};
-static uint8_t avrcsr[] =  {N808_CSR_1,  N808_CSR_2};
-static uint8_t avrdata[] = {N808_DAT_1,  N808_DAT_2};
+static uint8_t avraddr[] = {N808_CPLD_ADDR_1, N808_CPLD_ADDR_2};
+static uint8_t avrcsr[] =  {N808_CPLD_CSR_1,  N808_CPLD_CSR_2};
+static uint8_t avrdata[] = {N808_CPLD_DAT_1,  N808_CPLD_DAT_2};
 
 static uint8_t segwdi[] = {N808_CSR_WDI_A | N808_CSR_WDI_B, N808_CSR_WDI_A, N808_CSR_WDI_B};
 
@@ -172,14 +178,14 @@ void n808_avr_write(int port, uint8_t reg, uint8_t data)
 /******************************************************************************/
 int n808_avr_kick_heartbeat(int seg)
 {
-    n808_cpld_write(avrcsr[N808_AVR_PORT_1], segwdi[seg]);
+    n808_cpld_write(avrcsr[N808_AVR_PORT_2], segwdi[seg]);
     return 0;
 }
 
 int n808_timeout_get(int seg)
 {
     static uint8_t regs[] = {N808_AVR_HEART_BEAT_TIMEOUT_A, N808_AVR_HEART_BEAT_TIMEOUT_B};
-    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]);
+    uint8_t m = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
     printf("Heartbeat timeout [%d]: %d msec\n", seg, (int) m * 100);
     return 0;
 }
@@ -189,7 +195,7 @@ int n808_timeout_set(int seg, char *v)
     static uint8_t regs[] = {N808_AVR_HEART_BEAT_TIMEOUT_A, N808_AVR_HEART_BEAT_TIMEOUT_B};
     int i = atoi(v); i /= 100;
     if (i <= 0xff) {
-        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], (uint8_t)i);
+        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], (uint8_t)i);
         return 0;
     }
     return -1;
@@ -197,7 +203,7 @@ int n808_timeout_set(int seg, char *v)
 
 int n808_startup_wait_get(int seg)
 {
-    uint8_t m = n808_avr_read(N808_AVR_PORT_1, N808_AVR_ST_UP_DLY);
+    uint8_t m = n808_avr_read(N808_AVR_PORT_2, N808_AVR_ST_UP_DLY);
     printf("Start up wait: %d sec\n", (int) m * 2);
     return 0;
 }
@@ -206,7 +212,7 @@ int n808_startup_wait_set(int seg, char *v)
 {
     int i = atoi(v); i /= 2;
     if (i <= 0xff) {
-        n808_avr_write(N808_AVR_PORT_1, N808_AVR_ST_UP_DLY, (uint8_t)i);
+        n808_avr_write(N808_AVR_PORT_2, N808_AVR_ST_UP_DLY, (uint8_t)i);
         return 0;
     }
     return -1;
@@ -214,7 +220,7 @@ int n808_startup_wait_set(int seg, char *v)
 
 int n808_startup_wait_ovr_get(int seg)
 {
-    uint8_t m = n808_avr_read(N808_AVR_PORT_1, N808_AVR_ST_UP_DLY_OVR);
+    uint8_t m = n808_avr_read(N808_AVR_PORT_2, N808_AVR_ST_UP_DLY_OVR);
     printf("Start up wait override: %d\n", m);
     return 0;
 }
@@ -223,7 +229,7 @@ int n808_startup_wait_ovr_set(int seg, char *v)
 {
     uint8_t i = atoi(v);
     if (i < 2) {
-        n808_avr_write(N808_AVR_PORT_1, N808_AVR_ST_UP_DLY_OVR, (uint8_t)i);
+        n808_avr_write(N808_AVR_PORT_2, N808_AVR_ST_UP_DLY_OVR, (uint8_t)i);
         return 0;
     }
     return -1;
@@ -232,7 +238,7 @@ int n808_startup_wait_ovr_set(int seg, char *v)
 int n808_default_mode_get(int seg)
 {
     static uint8_t regs[] = {N808_AVR_COPPER_DEFAULT_MD_A, N808_AVR_COPPER_DEFAULT_MD_B};
-    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]);
+    uint8_t m = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
     printf("Default mode [%d]: %d\n", seg, (int) m);
     return 0;
 }
@@ -242,7 +248,7 @@ int n808_default_mode_set(int seg, char *v)
     static uint8_t regs[] = {N808_AVR_COPPER_DEFAULT_MD_A, N808_AVR_COPPER_DEFAULT_MD_B};
     uint8_t i = atoi(v);
     if (i < 6) {
-        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], i);
+        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], i);
         return 0;
     }
     return -1;
@@ -251,8 +257,9 @@ int n808_default_mode_set(int seg, char *v)
 int n808_poweroff_mode_get(int seg)
 {
     static uint8_t regs[] = {N808_AVR_PWR_OFF_MD_A, N808_AVR_PWR_OFF_MD_B};
-    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]);
-    printf("Power Off mode [%d]: %s\n", seg, (m)?"Bypass":"No Link");
+    uint8_t m = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
+printf("m=%x\n", m);
+    printf("Power Off mode [%d]: %s\n", seg, (m) ? "Bypass" : "No Link");
     return 0;
 }
 
@@ -261,7 +268,7 @@ int n808_poweroff_mode_set(int seg, char *v)
     static uint8_t regs[] = {N808_AVR_PWR_OFF_MD_A, N808_AVR_PWR_OFF_MD_B};
     uint8_t i = atoi(v);
     if (i < 2) {
-        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], i);
+        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], i);
         return 0;
     }
     return -1;
@@ -270,8 +277,8 @@ int n808_poweroff_mode_set(int seg, char *v)
 int n808_current_mode_get(int seg)
 {
     static uint8_t regs[] = {N808_AVR_CURRENT_MODE_A, N808_AVR_CURRENT_MODE_B};
-    uint8_t m = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]);
-    printf("Current mode [%d]: %d\n", seg, (int)m);
+    uint8_t m = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
+    printf("Current mode [%d]: 0x%x\n", seg, (int)m);
     return 0;
 }
 
@@ -281,7 +288,7 @@ int n808_current_mode_set(int seg, char *v)
     uint8_t i = atoi(v);
 
     if (i < 6) {
-        n808_avr_write(N808_AVR_PORT_1, regs[seg - 1], i);
+        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], i);
         return 0;
     }
     return -1;
@@ -291,9 +298,10 @@ int n808_status_get(int seg)
 {
     static uint8_t regs[] = {N808_AVR_RLY_STATUS_A, N808_AVR_RLY_STATUS_B};
     static char *status[] = {"BYPASS", "INLINE", "NO LINK"};
-
-    uint8_t v = n808_avr_read(N808_AVR_PORT_1, regs[seg - 1]); //Port 1 or 2?
-    printf("Status [%d]: %s\n", seg, status[v - 1]);
+    uint8_t v = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
+    if (v > 0 && v < 3) {
+       printf("Status [%d]: %s\n", seg, status[v - 1]);
+    }
     return 0;
 }
 
@@ -305,25 +313,25 @@ int n808_oem_id_get(int seg)
 
 int n808_product_rev_get(int seg)
 {
-    uint8_t v = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_REV);
+    uint8_t v = n808_avr_read(N808_AVR_PORT_2, N808_AVR_PRODUCT_REV);
     printf("Product revision: %d\n", v);
     return 0;
 }
 
 int n808_product_id_get(int seg)
 {
-    uint8_t lo = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_L);
-    uint8_t hi = n808_avr_read(N808_AVR_PORT_1, N808_AVR_PRODUCT_ID_H);
+    uint8_t lo = n808_avr_read(N808_AVR_PORT_2, N808_AVR_PRODUCT_ID_L);
+    uint8_t hi = n808_avr_read(N808_AVR_PORT_2, N808_AVR_PRODUCT_ID_H);
     int id = hi << 8 | lo;
-    printf("Product ID: %x\n", id);
+    printf("N808 board, Product ID: 0x%x\n", id);
     return id;
 }
 
 int n808_fw_rev_get(int seg)
 {
-    uint8_t v = n808_avr_read(N808_AVR_PORT_1, N808_AVR_FIRMWARE_REV);
-    uint8_t vv = n808_avr_read(N808_AVR_PORT_1, N808_AVR_SEC_FIRMWARE_REV);
-    printf("Firmware revision: %d.%d\n", v, vv);
+    uint8_t mj = n808_avr_read(N808_AVR_PORT_2, N808_AVR_FIRMWARE_REV);
+    uint8_t mn = n808_avr_read(N808_AVR_PORT_2, N808_AVR_SEC_FIRMWARE_REV);
+    printf("Firmware revision: %d.%d\n", mj, mn);
     return 0;
 }
 
@@ -338,14 +346,18 @@ int n808_probe(void)
  * Note, the save value can be found in CPLD ID register (address = 0).
  */
 {
+    uint8_t v;
     /*Enable access to the MDIO bus.*/
     cvmx_write_csr(CVMX_SMIX_EN(N808_MDIO_BUS), 0x1);
 
     /*Retrieve and analyze the Product ID.*/
-    uint8_t id = n808_cpld_read(N808_CPLD_SIG_L);
-    if (id != N808_SIGN_L) {
+    v = n808_cpld_read(N808_CPLD_SIG_L);
+    if (v != N808_SIGN_L) {
         return IMTHW_UNDEF;
     }
+    /*Allow AVR to control relays.*/
+    n808_cpld_write(N808_CPLD_TEST_R, N808_TEST_R_AVR_RCS);
+
     return IMTHW_N808;
 }
 

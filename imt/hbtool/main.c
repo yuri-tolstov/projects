@@ -468,7 +468,7 @@ void usage(const char *prog, hbtool_mode_t m)
 int hbtool_init(int verb)
 /******************************************************************************/
 {
-    int i, rc = 0;
+    int i, rc = IMTHW_UNDEF;
 
     /*Open connection with the OCTEON CPU.*/
     if (octeon_remote_open("PCI", verb)) {
@@ -476,7 +476,7 @@ int hbtool_init(int verb)
         return IMTHW_UNDEF;
     }
     /*Detect known hardware.*/
-    for (i = IMTHW_N804; i < IMTHW_MAX; i++) {
+    for (i = 0; i < IMTHW_MAX; i++) {
        hwini[i].init(&hwop);
        if ((rc = hwop.probe()) >= 0)
            break;

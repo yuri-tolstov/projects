@@ -237,7 +237,7 @@ int n804_product_rev_get(int seg)
 int n804_product_id_get(int seg)
 {
     uint8_t s = n804_avr_read(0x42);
-    printf("Product Id: %d\n", s);
+    printf("N804 board, Product Id: %d\n", s);
     return 0;
 }
 
