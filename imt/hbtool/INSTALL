@@ -1,0 +1,20 @@
+The hbtool sources can be installed anywhere outside of OCTEON-SDK as standalone module or can be part of the OCTEON-SDK, e.g. located in the $OCTEON_ROOT/host directory.
+
+The Host and Target runtime environment for hbtool -- CentOS Linux.
+
+1. Link the module against OCTEON-SDK-2.3
+$ cd <OCTEON-SDK-install-directory>
+$ source env-setup OCTEON_CN66XX
+This will setup several OCTEON-SDK related environment variables.
+
+2. Compile OCTEON-SDK Remote Libarary, if it is not created yet.
+The library is used by the hbtool.
+$ cd $OCTEON_ROOT/host/remote-lib
+$ make
+
+2. Build the hbtool module
+$ cd 
+$ make clean
+$ make
+This will generate hbtool binary.
+
