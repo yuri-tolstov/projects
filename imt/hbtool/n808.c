@@ -185,8 +185,8 @@ int n808_avr_kick_heartbeat(int seg)
 int n808_timeout_get(int seg)
 {
     static uint8_t regs[] = {N808_AVR_HEART_BEAT_TIMEOUT_A, N808_AVR_HEART_BEAT_TIMEOUT_B};
-    uint8_t m = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
-    printf("Heartbeat timeout [%d]: %d msec\n", seg, (int) m * 100);
+    uint8_t d = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
+    printf("Heartbeat timeout [%d]: %d msec\n", seg, (int) d * 100);
     return 0;
 }
 
@@ -203,8 +203,8 @@ int n808_timeout_set(int seg, char *v)
 
 int n808_startup_wait_get(int seg)
 {
-    uint8_t m = n808_avr_read(N808_AVR_PORT_2, N808_AVR_ST_UP_DLY);
-    printf("Start up wait: %d sec\n", (int) m * 2);
+    uint8_t d = n808_avr_read(N808_AVR_PORT_2, N808_AVR_ST_UP_DLY);
+    printf("Start up wait: %d sec\n", (int) d * 2);
     return 0;
 }
 
@@ -220,8 +220,8 @@ int n808_startup_wait_set(int seg, char *v)
 
 int n808_startup_wait_ovr_get(int seg)
 {
-    uint8_t m = n808_avr_read(N808_AVR_PORT_2, N808_AVR_ST_UP_DLY_OVR);
-    printf("Start up wait override: %d\n", m);
+    uint8_t d = n808_avr_read(N808_AVR_PORT_2, N808_AVR_ST_UP_DLY_OVR);
+    printf("Start up wait override: %d\n", d);
     return 0;
 }
 
@@ -237,18 +237,19 @@ int n808_startup_wait_ovr_set(int seg, char *v)
 
 int n808_default_mode_get(int seg)
 {
-    static uint8_t regs[] = {N808_AVR_COPPER_DEFAULT_MD_A, N808_AVR_COPPER_DEFAULT_MD_B};
-    uint8_t m = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
-    printf("Default mode [%d]: %d\n", seg, (int) m);
+    static uint8_t regs[] = {N808_AVR_COPPER_DEFAULT_MD_A, N808_AVR_FIBER_DEFAULT_MD_B};
+    uint8_t d = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
+    printf("Default mode [%d]: %d\n", seg, (int)d & 0x7);
     return 0;
 }
 
 int n808_default_mode_set(int seg, char *v)
 {
-    static uint8_t regs[] = {N808_AVR_COPPER_DEFAULT_MD_A, N808_AVR_COPPER_DEFAULT_MD_B};
+    static uint8_t regs[] = {N808_AVR_COPPER_DEFAULT_MD_A, N808_AVR_FIBER_DEFAULT_MD_B};
+    uint8_t dat[] = {0x00/*Copper*/, 0x90/*Fiber*/};
     uint8_t i = atoi(v);
     if (i < 6) {
-        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], i);
+        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], dat[seg - 1] | i);
         return 0;
     }
     return -1;
@@ -257,18 +258,18 @@ int n808_default_mode_set(int seg, char *v)
 int n808_poweroff_mode_get(int seg)
 {
     static uint8_t regs[] = {N808_AVR_PWR_OFF_MD_A, N808_AVR_PWR_OFF_MD_B};
-    uint8_t m = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
-printf("m=%x\n", m);
-    printf("Power Off mode [%d]: %s\n", seg, (m) ? "Bypass" : "No Link");
+    uint8_t d = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
+    printf("Power Off mode [%d]: %s\n", seg, (d) ? "Bypass" : "No Link");
     return 0;
 }
 
 int n808_poweroff_mode_set(int seg, char *v)
 {
     static uint8_t regs[] = {N808_AVR_PWR_OFF_MD_A, N808_AVR_PWR_OFF_MD_B};
+    int shft[] = {0/*Copper*/, 4/*Fiber*/};
     uint8_t i = atoi(v);
     if (i < 2) {
-        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], i);
+        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], i << shft[seg - 1]);
         return 0;
     }
     return -1;
@@ -277,18 +278,20 @@ int n808_poweroff_mode_set(int seg, char *v)
 int n808_current_mode_get(int seg)
 {
     static uint8_t regs[] = {N808_AVR_CURRENT_MODE_A, N808_AVR_CURRENT_MODE_B};
-    uint8_t m = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
-    printf("Current mode [%d]: 0x%x\n", seg, (int)m);
+    uint8_t d = n808_avr_read(N808_AVR_PORT_2, regs[seg - 1]);
+    printf("Current mode [%d]: 0x%x\n", seg, (int)d & 0x7);
     return 0;
 }
 
 int n808_current_mode_set(int seg, char *v)
 {
     static uint8_t regs[] = {N808_AVR_CURRENT_MODE_A, N808_AVR_CURRENT_MODE_B};
-    uint8_t i = atoi(v);
+    uint8_t dat[] = {0x00/*Copper*/, 0x80/*Fiber*/};
+    int i = atoi(v);
+    dat[seg - 1] |= i;
 
     if (i < 6) {
-        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], i);
+        n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], dat[seg - 1]);
         return 0;
     }
     return -1;
@@ -342,8 +345,8 @@ int n808_numseg_get(void)
 
 int n808_probe(void)
 /* Returns: IMTHW_N808 or IMTHW_UNDEF.
- * The detection is peformed based on the Product ID AVR register.
- * Note, the save value can be found in CPLD ID register (address = 0).
+ * The board detection is performed based on the Product ID AVR register.
+ * Note, the save value can be found in the CPLD ID register (address = 0).
  */
 {
     uint8_t v;
@@ -355,9 +358,6 @@ int n808_probe(void)
     if (v != N808_SIGN_L) {
         return IMTHW_UNDEF;
     }
-    /*Allow AVR to control relays.*/
-    n808_cpld_write(N808_CPLD_TEST_R, N808_TEST_R_AVR_RCS);
-
     return IMTHW_N808;
 }
 
