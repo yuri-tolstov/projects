@@ -246,7 +246,7 @@ int n808_default_mode_get(int seg)
 int n808_default_mode_set(int seg, char *v)
 {
     static uint8_t regs[] = {N808_AVR_COPPER_DEFAULT_MD_A, N808_AVR_FIBER_DEFAULT_MD_B};
-    uint8_t dat[] = {0x00/*Copper*/, 0x90/*Fiber*/};
+    uint8_t dat[] = {0x00/*Copper*/, 0xB0/*Fiber*/};
     uint8_t i = atoi(v);
     if (i < 6) {
         n808_avr_write(N808_AVR_PORT_2, regs[seg - 1], dat[seg - 1] | i);
