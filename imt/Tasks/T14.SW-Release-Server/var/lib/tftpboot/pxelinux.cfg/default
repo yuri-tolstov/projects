@@ -1,0 +1,38 @@
+default vesamenu.c32
+prompt 1
+timeout 200
+
+label localboot
+   menu label ^1 Local Boot
+   localboot 0
+
+label debian
+   menu label ^2 Debian-7
+   kernel debian/amd64/linux
+   append vga-788 initrd=debian/amd64/initrd.gz --quiet
+
+label ubuntu-server
+   menu label ^3 Ubuntu-14.04-Server
+   kernel ubunutu-server/amd64/linux
+   append vga-788 initrd=ubuntu-server/amd64/initrd.gz --quiet
+
+label ubuntu-desktop
+   menu label ^4 Ubuntu-14.04-Desktop
+   kernel ubunutu-desktop/amd64/linux
+   append vga-788 initrd=ubuntu-desktop/amd64/initrd.gz --quiet
+
+label centos5
+   menu label ^5 CentOS-5.10
+   kernel centos5/vmlinuz
+   append load initrd=centos5/initrd.img devfs=nomount ip=dhcp
+
+label centos6
+   menu label ^6 CentOS-6.5
+   kernel centos6/vmlinuz
+   append load initrd=centos6/initrd.img devfs=nomount ip=dhcp
+
+label touchstone-iqp-1.0.0
+   menu label ^7 Touchstone-IQP-1.0.0
+   kernel centos5/vmlinuz
+   append load initrd=centos5/initrd.img devfs=nomount ks=http://10.0.0.1/intmas/touchstone-iqp/1.0.0/ks.cfg ksdevice=eth0 ip=dhcp
+

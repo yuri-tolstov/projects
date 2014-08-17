@@ -1,0 +1,20 @@
+1. Release Files:
+   touchstone-1.0.0-1.n1313.setup
+   distrib/
+      CentOS-5.10-x86_64-bin-DVD-1of2.iso (not included in the release)
+      IQProbe-4.7.18.ATT.SXL-000.x86_64.rpm
+      IQProbe.cfg
+      igb-4.1.2.tar.gz
+      igb.conf
+      ks.cfg
+      centos5.repo
+
+1. Installation
+Run the release setup utility:
+# ./touchstone-1.0.0-1.n1313.setup
+
+This will create and setup directories and files in the TFTP and HTTP controlled areas:
+centos5, config, ks, packages.
+
+Attach the Release to the PXE Server. Note, the Release uses CentOS Kickstart capabilities for install automation.
+

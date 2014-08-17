@@ -1,0 +1,7 @@
+[CentOS-5.10]
+name=CentoOS 5.10 x86_64
+baseurl=file:///var/yumrepo/centos5
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
+gpgcheck=1 
+enabled=1 
+
