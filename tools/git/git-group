@@ -43,6 +43,13 @@ done
 show-active-branches
 ;;
 #===============================================================================
+   update)
+#===============================================================================
+git pull
+git submodule update --init --recursive
+# git clone --recurse-submodules  -- Consider this
+;;
+#===============================================================================
    pull)
 #===============================================================================
 for smod in $SUBMODS; do
@@ -59,7 +66,7 @@ echo "--------------------------------------------------------------------------
 git status
 for smod in $SUBMODS; do
    echo "-------------------------------------------------------------------------------"
-   echo "Submodule $smod status:"
+   echo "Submodule ${smod^^} status:"
    echo "-------------------------------------------------------------------------------"
    cd $ROOTD/$smod
    git status
@@ -68,7 +75,15 @@ done
 #===============================================================================
    *)
 #===============================================================================
-   echo "Unknown command"
+echo "Submodules:"
+git submodule
+echo ""
+echo "Group commands and parameters (applied to all submodules):"
+echo "   status"
+echo "   update"
+echo "   pull"
+echo "   branch"
+echo "   switch-branch"
 ;;
 esac
 
