@@ -38,3 +38,6 @@ Hello, world!
 $ cat /dev/hello
 Hello, world!
 
+NOTE: Watch uevents (e.g. module install/uninstall) using
+$ udevadm monitor
+
