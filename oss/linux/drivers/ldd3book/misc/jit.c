@@ -28,6 +28,8 @@
 #include <linux/types.h>
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
+#include <linux/slab.h>  /*kmalloc*/
+#include <linux/proc_fs.h>  /*kmalloc*/
 
 #include <asm/hardirq.h>
 /*

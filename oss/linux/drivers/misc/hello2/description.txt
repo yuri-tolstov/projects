@@ -1,0 +1,40 @@
+http://www.linuxdevcenter.com/pub/a/linux/2007/07/05/devhelloworld-a-simple-introduction-to-device-drivers-under-linux.html?page=2
+
+$ cd hello2
+$ make
+$ sudo insmod ./hello.ko
+
+Now there is a device named /dev/hello that will produce "Hello, world!" when read by root:
+$ sudo cat /dev/hello
+Hello, world!
+
+-------- Attempt 1:
+But we can't read it as a regular user:
+$ cat /dev/hello
+cat: /dev/hello: Permission denied
+$ ls -l /dev/hello
+crw-rw---- 1 root root 10, 61 2007-06-20 14:31 /dev/hello
+
+This is what happens with the default udev rule, which says that when a miscellaneous device appears, create a file named /dev/<device name> and give it permissions 0660 (owner and group have read-write access, everyone else has no access). We would really like instead for the device be readable by regular users and have a link to it named /dev/hello_world. In order to do this, we'll write a udev rule.
+
+The udev rule has to do two things: create a symbolic link and change the permissions on device to make world readable. The rule that accomplishes this is:
+KERNEL=="hello", SYMLINK+="hello_world", MODE="0444"
+
+-------- Attempt 2:
+Copy the hello.rules file from the hello_dev directory into the /etc/udev/ directory and create a link to it that will be executed before any other rules file:
+$ sudo cp hello.rules /etc/udev/
+$ sudo ln -s ../hello.rules /etc/udev/rules.d/010_hello.rules
+
+Now, reload the hello world driver and look at the new /dev entries:
+$ sudo rmmod hello_dev
+$ sudo insmod ./hello_dev.ko
+$ ls -l /dev/hello*
+cr--r--r-- 1 root root 10, 61 2007-06-19 21:21 /dev/hello
+lrwxrwxrwx 1 root root      5 2007-06-19 21:21 /dev/hello_world -> hello
+
+Now we have /dev/hello_world! Finally, check that you can read the "Hello, world!" devices as a normal user:
+$ cat /dev/hello_world
+Hello, world!
+$ cat /dev/hello
+Hello, world!
+
