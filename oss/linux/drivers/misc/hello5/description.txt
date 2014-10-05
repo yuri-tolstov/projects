@@ -1,0 +1,19 @@
+================================================================================
+1. Demonstration of using /sys for communication with the Driver.
+
+2. References
+http://www.makelinux.net/ldd3/chp-14-sect-1
+http://makelinux.net/ldd3/chp-14-sect-2
+http://lwn.net/images/pdf/LDD3/ch14.pdf
+http://kroah.com/log/blog/2013/06/26/how-to-create-a-sysfs-file-correctly/
+http://lwn.net/Articles/54651/
+
+http://lwn.net/Articles/266722/
+http://www.ibm.com/developerworks/linux/library/l-user-space-apps/index.html?ca=dgr-lnxw97Kernel-APIs-P1dth-LX
+http://www.crashcourse.ca/wiki/index.php/Kobjects
+
+
+================================================================================
+$ make
+$ sudo insmod ./hello.ko
+

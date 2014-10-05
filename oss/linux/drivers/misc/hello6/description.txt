@@ -1,8 +1,8 @@
 ================================================================================
-1. Demonstration of using /proc for communication with the Driver.
-Creates /proc/srm_environment directory and tree.
+1. Demonstration of using kobjec and kset.
 
 ================================================================================
+Copy kobject-example.c (or kset-example.c) to hello.c.
 $ make
 $ sudo insmod ./hello.ko
 

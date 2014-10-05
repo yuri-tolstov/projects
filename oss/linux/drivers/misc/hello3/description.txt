@@ -5,7 +5,6 @@
 https://raw.githubusercontent.com/duxing2007/ldd3-examples-3.x/master/misc-modules/jit.c
 
 ================================================================================
-$ cd hello3
 $ make
 $ sudo insmod ./hello.ko
 

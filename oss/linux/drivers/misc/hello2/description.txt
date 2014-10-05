@@ -8,7 +8,6 @@ $ udevadm monitor
 http://www.linuxdevcenter.com/pub/a/linux/2007/07/05/devhelloworld-a-simple-introduction-to-device-drivers-under-linux.html?page=2
 
 ================================================================================
-$ cd hello2
 $ make
 $ sudo insmod ./hello.ko
 
