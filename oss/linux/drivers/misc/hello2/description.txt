@@ -1,5 +1,13 @@
+================================================================================
+1. Demonstration of using the Linux Driver hotplug.
+
+2. To watch uevents (e.g. module install/uninstall):
+$ udevadm monitor
+
+3. Reference. This is the Web page from the the code was taken.
 http://www.linuxdevcenter.com/pub/a/linux/2007/07/05/devhelloworld-a-simple-introduction-to-device-drivers-under-linux.html?page=2
 
+================================================================================
 $ cd hello2
 $ make
 $ sudo insmod ./hello.ko
@@ -37,7 +45,4 @@ $ cat /dev/hello_world
 Hello, world!
 $ cat /dev/hello
 Hello, world!
-
-NOTE: Watch uevents (e.g. module install/uninstall) using
-$ udevadm monitor
 

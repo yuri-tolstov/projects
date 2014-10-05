@@ -1,0 +1,11 @@
+================================================================================
+1. Demonstration of using /proc for communication with the Driver.
+
+2. Reference. This is the Web page from the the code was taken.
+https://raw.githubusercontent.com/duxing2007/ldd3-examples-3.x/master/misc-modules/jit.c
+
+================================================================================
+$ cd hello3
+$ make
+$ sudo insmod ./hello.ko
+
