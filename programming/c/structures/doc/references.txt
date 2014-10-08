@@ -1,0 +1,3 @@
+http://www.sanfoundry.com/c-programming-examples-linked-list/
+http://codingfreak.blogspot.com/2012/02/implementation-of-doubly-linked-list-in.html
+
