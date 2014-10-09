@@ -9,8 +9,8 @@ Linux List is defined in:
 The specifics:
 
 1. The Linux list -- a curcular linked list.
-2. Every item contains a (circular) list.
-   Vs. as normally, items are lined up in a list;
+2. Every item contains a (circular) list (endo-list).
+   Vs. as normally, items are lined up in a list (exo-list).
 3. New node is added after the head by function:
    list_add(struct list_head *new, struct list_head *head);
       head => new
