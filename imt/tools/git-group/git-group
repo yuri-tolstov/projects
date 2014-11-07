@@ -1,0 +1,115 @@
+#!/bin/bash
+#*******************************************************************************
+# Functions
+#*******************************************************************************
+#===============================================================================
+function show_active_branches() {
+#===============================================================================
+    echo "Active branches:"
+    BRANCH=$(git name-rev HEAD 2> /dev/null | awk '{print $2}')
+    echo -e "   ROOT:\t$BRANCH"
+    for smod in $SUBMODS; do
+        pushd $smod > /dev/null
+        BRANCH=$(git name-rev HEAD 2> /dev/null | awk '{print $2}')
+        echo -e "   ${smod^^}\t$BRANCH"
+        popd > /dev/null
+    done
+}
+
+#===============================================================================
+function exec_gitgroup_commands() {
+#===============================================================================
+    local xcmd=$1   
+    local gitcmd=$2   
+    local gitcmd2=$3   
+    echo "-------------------------------------------------------------------------------"
+    echo -e "\tROOT"
+    echo "-------------------------------------------------------------------------------"
+    case $xcmd in
+    --show-branch)
+        CBRANCH=$(git symbolic-ref -q --short HEAD)
+        echo "Branch = $CBRANCH"
+        ;;
+    *) ;;
+    esac
+    git $gitcmd $TGTBRANCH
+    if test "$gitcmd2" != ""; then
+        git $gitcmd2 $TGTBRANCH
+    fi
+    for smod in $SUBMODS; do
+        echo "-------------------------------------------------------------------------------"
+        echo -e "\t${smod^^}"
+        echo "-------------------------------------------------------------------------------"
+        pushd $smod > /dev/null
+        case $xcmd in
+        --show-branch)
+            CBRANCH=$(git symbolic-ref -q --short HEAD)
+            echo "Branch = $CBRANCH"
+            ;;
+        *) ;;
+        esac
+        git $gitcmd $TGTBRANCH
+        if test "$gitcmd2" != ""; then
+            git $gitcmd2 $TGTBRANCH
+        fi
+        popd > /dev/null
+    done
+}
+
+#*******************************************************************************
+# Program
+#*******************************************************************************
+CMD=$1
+
+ROOTD=$(pwd)
+if test ! -d .git; then
+    echo "Command should be executed from the root of Git repository"
+    exit 1
+fi
+
+SUBMODS=$(find . -maxdepth 2 -type d -name .git | sed -e 's/\.git//g' | awk -F/ '{print $2}' | sort)
+
+case $CMD in
+#===============================================================================
+    status)
+#===============================================================================
+if test -f .gitmodules; then
+    echo "Submodules:"
+    git submodule
+fi
+exec_gitgroup_commands --none status
+;;
+#===============================================================================
+    fetch)
+#===============================================================================
+exec_gitgroup_commands --show-branch fetch
+;;
+#===============================================================================
+    pull)
+#===============================================================================
+exec_gitgroup_commands --show-branch pull
+;;
+#===============================================================================
+    branch)
+#===============================================================================
+show_active_branches
+;;
+#===============================================================================
+    switch-branch)
+#===============================================================================
+TGTBRANCH=$2
+exec_gitgroup_commands --none checkout
+show_active_branches
+;;
+#===============================================================================
+   help | *)
+#===============================================================================
+echo "Group commands and parameters (applied to all submodules):"
+echo "   status"
+echo "   fetch"
+echo "   pull"
+echo "   branch"
+echo "   switch-branch"
+;;
+esac
+
